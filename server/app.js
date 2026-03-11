@@ -17,7 +17,10 @@ const notificationRoutes = require("./routes/notificationRoutes");
 const app = express();
 
 // ---- Middlewares ----
-app.use(cors());
+app.use(cors({
+  origin: process.env.CLIENT_URL || "http://localhost:3000",
+  credentials: true,
+}));
 app.use(express.json({ limit: "10mb" })); // 10mb for base64 images
 
 // ---- Routes ----
