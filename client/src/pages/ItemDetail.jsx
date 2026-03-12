@@ -206,6 +206,14 @@ export default function ItemDetail() {
     return () => stopLocationSharing()
   }, [item?.status])
 
+  // Redirect the FINDER (not owner) to the success popup when case is closed
+  useEffect(() => {
+    if (!item || !session || isLoading) return
+    if (item.status === 'closed' && !isReporter && myClaim?.status === 'approved') {
+      navigate('/closed')
+    }
+  }, [item?.status, isReporter, myClaim?.status, isLoading])
+
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -373,8 +381,9 @@ export default function ItemDetail() {
       // Add to notification center
       notifyCaseStatusChangeToCenter(addNotification, updatedItem, 'closed', item.templeCode)
       
-      // Navigate to case closed page
-      navigate('/closed')
+      // Owner stays on page — the finder gets the popup via status change detection
+      setItem({ ...item, status: 'closed' })
+      setIsClosing(false)
     } catch (error) {
       console.error('Failed to close case:', error)
       setIsClosing(false)
