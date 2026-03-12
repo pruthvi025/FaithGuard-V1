@@ -396,29 +396,22 @@ export async function rejectClaim(claimId) {
 // =================================================================
 
 // -----------------------------------------------------------------
-// Submit a found item report (uses FormData for mobile support)
+// Submit a found item report (simple JSON)
 // -----------------------------------------------------------------
-export async function submitFoundItem(title, description, category, locationFound, timeFound, imageFile, message) {
+export async function submitFoundItem(title, category, locationFound, timeFound) {
   try {
-    const formData = new FormData();
-    formData.append('title', title);
-    formData.append('description', description);
-    formData.append('category', category || 'other');
-    formData.append('locationFound', locationFound);
-    formData.append('timeFound', timeFound || new Date().toISOString());
-    formData.append('message', message || '');
-    if (imageFile) {
-      formData.append('image', imageFile);
-    }
-
-    const token = getSessionToken();
-    const headers = {};
-    if (token) headers['session-id'] = token;
-
     const res = await fetch(`${API_URL}/api/found-items/create`, {
       method: 'POST',
-      headers,
-      body: formData,
+      headers: {
+        ...authHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        title,
+        category: category || 'other',
+        locationFound,
+        timeFound: timeFound || new Date().toISOString(),
+      }),
     });
 
     const data = await res.json();

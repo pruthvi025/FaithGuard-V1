@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Upload, X, Search, AlertCircle, Phone, Briefcase, Gem, WalletCards, KeyRound, MoreHorizontal, MapPin, Clock, Camera } from 'lucide-react'
+import { ArrowLeft, Search, AlertCircle, Phone, Briefcase, Gem, WalletCards, KeyRound, MoreHorizontal, MapPin, Clock } from 'lucide-react'
 import { useSession } from '../context/SessionContext'
 import { submitFoundItem } from '../services/itemService'
 import Layout from '../components/Layout'
@@ -16,91 +16,43 @@ export default function ReportFoundItem() {
   const [formData, setFormData] = useState({
     category: '',
     title: '',
-    description: '',
     locationFound: '',
     timeFound: '',
-    message: '',
   })
-  const [imageFile, setImageFile] = useState(null)
-  const [imagePreview, setImagePreview] = useState(null)
   const [errors, setErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
 
-  // Validate session
   useEffect(() => {
     if (!isSessionValid()) {
       navigate('/checkin', { replace: true })
     }
   }, [isSessionValid, navigate])
 
-  // Compress image using canvas
-  const compressImage = (file) => {
-    return new Promise((resolve) => {
-      const img = new Image()
-      const url = URL.createObjectURL(file)
-      img.onload = () => {
-        URL.revokeObjectURL(url)
-        const MAX = 800
-        let w = img.width, h = img.height
-        if (w > MAX || h > MAX) {
-          if (w > h) { h = Math.round(h * MAX / w); w = MAX }
-          else { w = Math.round(w * MAX / h); h = MAX }
-        }
-        const canvas = document.createElement('canvas')
-        canvas.width = w
-        canvas.height = h
-        const ctx = canvas.getContext('2d')
-        ctx.drawImage(img, 0, 0, w, h)
-        canvas.toBlob(
-          (blob) => resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' })),
-          'image/jpeg',
-          0.7
-        )
-      }
-      img.onerror = () => resolve(file)
-      img.src = url
-    })
-  }
-
-  const handleImageUpload = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    if (!file.type.startsWith('image/')) {
-      setErrors({ ...errors, image: 'Please upload an image file' })
-      return
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      setErrors({ ...errors, image: 'Image must be less than 10MB' })
-      return
-    }
-
-    setImagePreview(URL.createObjectURL(file))
-    const compressed = await compressImage(file)
-    setImageFile(compressed)
-    const newErrors = { ...errors }
-    delete newErrors.image
-    setErrors(newErrors)
-  }
-
   const handleFieldChange = (field, value) => {
     setFormData({ ...formData, [field]: value })
-
     const newErrors = { ...errors }
     if (field === 'title' && value.trim().length >= 3) delete newErrors.title
-    if (field === 'description' && value.trim().length >= 10) delete newErrors.description
     if (field === 'locationFound' && value.trim().length > 0) delete newErrors.locationFound
+    delete newErrors.submit
     setErrors(newErrors)
   }
 
   const validateForm = () => {
     const newErrors = {}
     if (!formData.title || formData.title.trim().length < 3) newErrors.title = 'Title must be at least 3 characters'
-    if (!formData.description || formData.description.trim().length < 10) newErrors.description = 'Description must be at least 10 characters'
     if (!formData.locationFound || formData.locationFound.trim().length === 0) newErrors.locationFound = 'Location is required'
+    if (!formData.category) newErrors.category = 'Please select a category'
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
+  }
+
+  const isFormValid = () => {
+    return (
+      formData.category &&
+      formData.title.trim().length >= 3 &&
+      formData.locationFound.trim().length > 0
+    )
   }
 
   const handleSubmit = async () => {
@@ -113,12 +65,9 @@ export default function ReportFoundItem() {
 
       await submitFoundItem(
         formData.title.trim(),
-        formData.description.trim(),
-        formData.category || 'other',
+        formData.category,
         formData.locationFound.trim(),
-        formData.timeFound || new Date().toISOString(),
-        imageFile,
-        formData.message.trim()
+        formData.timeFound || new Date().toISOString()
       )
 
       setSubmitted(true)
@@ -128,14 +77,6 @@ export default function ReportFoundItem() {
     } finally {
       setIsSubmitting(false)
     }
-  }
-
-  const isFormValid = () => {
-    return (
-      formData.title.trim().length >= 3 &&
-      formData.description.trim().length >= 10 &&
-      formData.locationFound.trim().length > 0
-    )
   }
 
   // Success screen
@@ -159,7 +100,7 @@ export default function ReportFoundItem() {
               </motion.div>
               <h2 className="text-2xl font-bold text-[#1E293B] mb-3">Found Item Reported!</h2>
               <p className="text-[#475569] mb-6">
-                Your report has been saved. If the owner reports this item as lost, they will be shown your found report as a potential match.
+                Your report has been saved. All temple visitors have been notified. If the owner is looking for this item, they'll be shown your report.
               </p>
               <div className="flex flex-col gap-3">
                 <Button onClick={() => navigate('/feed')} className="w-full">
@@ -284,23 +225,6 @@ export default function ReportFoundItem() {
                       {errors.title && <p className="text-xs text-red-600 mt-1">{errors.title}</p>}
                     </div>
 
-                    {/* Description */}
-                    <div>
-                      <label className="block text-sm font-semibold text-[#475569] mb-3">
-                        Description *
-                        <span className="text-xs text-gray-400 ml-2">({formData.description.length}/500)</span>
-                      </label>
-                      <textarea
-                        placeholder="Describe the item... Include color, size, brand, unique features, etc."
-                        value={formData.description}
-                        onChange={(e) => handleFieldChange('description', e.target.value)}
-                        className={`w-full px-4 py-3 rounded-xl bg-white border-2 focus:outline-none focus:ring-2 focus:ring-[#F59E0B]/20 min-h-[120px] resize-none transition-all ${
-                          errors.description ? 'border-red-300' : 'border-gray-200 focus:border-[#F59E0B]'
-                        }`}
-                      />
-                      {errors.description && <p className="text-xs text-red-600 mt-1">{errors.description}</p>}
-                    </div>
-
                     {/* Location Found */}
                     <div>
                       <label className="block text-sm font-semibold text-[#475569] mb-3">
@@ -326,64 +250,6 @@ export default function ReportFoundItem() {
                         type="datetime-local"
                         value={formData.timeFound}
                         onChange={(e) => setFormData({ ...formData, timeFound: e.target.value })}
-                      />
-                    </div>
-
-                    {/* Photo */}
-                    <div>
-                      <label className="block text-sm font-semibold text-[#475569] mb-3">
-                        <Camera className="w-4 h-4 inline mr-1 text-[#F59E0B]" />
-                        Photo (recommended)
-                      </label>
-                      <motion.div
-                        whileHover={{ scale: 1.02 }}
-                        className="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center hover:border-[#F59E0B]/50 transition-colors cursor-pointer bg-gradient-to-br from-gray-50 to-white"
-                      >
-                        {imagePreview ? (
-                          <div className="relative">
-                            <img src={imagePreview} alt="Preview" className="max-h-48 mx-auto rounded-xl shadow-lg" />
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              onClick={() => { setImageFile(null); setImagePreview(null) }}
-                              className="absolute top-2 right-2 bg-white rounded-full p-2 shadow-lg hover:bg-red-50 transition-colors"
-                            >
-                              <X className="w-4 h-4 text-red-500" />
-                            </motion.button>
-                          </div>
-                        ) : (
-                          <label className="cursor-pointer">
-                            <input
-                              type="file"
-                              accept="image/*"
-                              capture="environment"
-                              onChange={handleImageUpload}
-                              className="hidden"
-                            />
-                            <div>
-                              <motion.div animate={{ y: [0, -5, 0] }} transition={{ duration: 2, repeat: Infinity }}>
-                                <Upload className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-                              </motion.div>
-                              <p className="text-sm text-[#475569] font-medium">Tap to upload a photo</p>
-                              <p className="text-xs text-gray-400 mt-1">Helps the owner identify the item</p>
-                            </div>
-                          </label>
-                        )}
-                      </motion.div>
-                      {errors.image && <p className="text-xs text-red-600 mt-1">{errors.image}</p>}
-                    </div>
-
-                    {/* Additional Message */}
-                    <div>
-                      <label className="block text-sm font-semibold text-[#475569] mb-3">
-                        Additional Notes (optional)
-                      </label>
-                      <textarea
-                        placeholder="e.g., I left it at the temple desk, Kept it with security..."
-                        value={formData.message}
-                        onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                        rows={3}
-                        className="w-full px-4 py-3 rounded-xl bg-white border-2 border-gray-200 focus:border-[#F59E0B] focus:outline-none focus:ring-2 focus:ring-[#F59E0B]/20 resize-none transition-all"
                       />
                     </div>
                   </div>

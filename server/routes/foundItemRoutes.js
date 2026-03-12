@@ -2,9 +2,9 @@
 // Found Item Routes
 // ============================================
 // Routes for the found item reporting system.
+// Simple JSON endpoints — no image uploads.
 
 const express = require("express");
-const multer = require("multer");
 const { verifySession } = require("../middleware/sessionMiddleware");
 const {
   createFoundItem,
@@ -15,21 +15,8 @@ const {
 
 const router = express.Router();
 
-// Multer configuration for image uploads
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith("image/")) {
-      cb(null, true);
-    } else {
-      cb(new Error("Only image uploads are allowed"), false);
-    }
-  },
-});
-
-// Found item creation with optional image upload
-router.post("/create", verifySession, upload.single("image"), createFoundItem);
+// Found item creation (JSON body)
+router.post("/create", verifySession, createFoundItem);
 
 // Get all found items for a temple
 router.get("/", verifySession, getFoundItems);

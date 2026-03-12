@@ -2,39 +2,27 @@
 // Found Items Controller
 // ============================================
 // Handles CRUD operations for found items.
-// When a finder discovers an item but no matching
-// lost report exists, they can create a found item
-// record for later matching.
+// Privacy-first: no photos, minimal data only.
 //
 // Firestore collection: "found_items"
 
 const { db } = require("../config/firebase");
 const { v4: uuidv4 } = require("uuid");
+const { notifyTemple } = require("../services/pushNotificationService");
 
 // -----------------------------------------------------------------
 // POST /api/found-items/create (protected)
-// Submit a found item report
+// Submit a found item report (JSON body, no image)
 // -----------------------------------------------------------------
 const createFoundItem = async (req, res) => {
-  const { title, description, category, locationFound, timeFound, message } = req.body;
+  const { title, category, locationFound, timeFound } = req.body;
   const session = req.session;
 
-  if (!title || !description || !locationFound) {
+  if (!title || !locationFound) {
     return res.status(400).json({
       success: false,
-      error: "Missing required fields: title, description, locationFound",
+      error: "Missing required fields: title, locationFound",
     });
-  }
-
-  // Get image: prefer multer file, fall back to base64 in body
-  let photoUrl = null;
-  if (req.file) {
-    const mimeType = req.file.mimetype || "image/jpeg";
-    const base64 = req.file.buffer.toString("base64");
-    photoUrl = `data:${mimeType};base64,${base64}`;
-    console.log(`📷 Found item image via multer: ${req.file.originalname} (${(req.file.size / 1024).toFixed(1)}KB)`);
-  } else if (req.body.photoUrl) {
-    photoUrl = req.body.photoUrl;
   }
 
   try {
@@ -44,12 +32,9 @@ const createFoundItem = async (req, res) => {
     const foundItemData = {
       foundId,
       title: title.trim(),
-      description: description.trim(),
       category: category || "other",
       locationFound: locationFound.trim(),
-      photoUrl,
       timeFound: timeFound || now,
-      message: (message || "").trim(),
       finderSessionId: session.sessionId,
       templeId: session.templeId,
       status: "found", // found | matched | closed
@@ -59,6 +44,21 @@ const createFoundItem = async (req, res) => {
     await db.collection("found_items").doc(foundId).set(foundItemData);
 
     console.log(`✅ Found item created: ${foundId} — "${title.trim()}"`);
+
+    // Notify all temple visitors about the found item
+    notifyTemple(
+      session.templeId,
+      {
+        title: "🔍 Someone found an item!",
+        body: `A ${category || "item"} was found: "${title.trim()}" at ${locationFound.trim()}`,
+      },
+      {
+        type: "found-item",
+        foundId,
+        templeId: session.templeId,
+      },
+      session.sessionId // exclude the finder from notification
+    );
 
     res.status(201).json({ success: true, foundItem: foundItemData });
   } catch (error) {
@@ -92,7 +92,6 @@ const getFoundItems = async (req, res) => {
       }
     });
 
-    // Sort by newest first
     items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     res.json({ success: true, items });
@@ -105,7 +104,6 @@ const getFoundItems = async (req, res) => {
 // -----------------------------------------------------------------
 // GET /api/found-items/match?templeId=...&title=...&category=...
 // Check if any found items match a lost item being reported
-// Returns potential matches based on temple, category, and text
 // -----------------------------------------------------------------
 const findMatches = async (req, res) => {
   const { templeId, title, category, description } = req.query;
@@ -128,18 +126,16 @@ const findMatches = async (req, res) => {
     const searchTerms = [
       ...(title || "").toLowerCase().split(/\s+/),
       ...(description || "").toLowerCase().split(/\s+/),
-    ].filter((t) => t.length > 2); // Skip short words
+    ].filter((t) => t.length > 2);
 
     const matches = [];
     snapshot.forEach((doc) => {
       const item = { id: doc.id, ...doc.data() };
-
-      // Score based on: same category + keyword overlap
       let score = 0;
 
       if (category && item.category === category) score += 3;
 
-      const itemText = `${item.title} ${item.description}`.toLowerCase();
+      const itemText = `${item.title}`.toLowerCase();
       for (const term of searchTerms) {
         if (itemText.includes(term)) score += 1;
       }
@@ -149,7 +145,6 @@ const findMatches = async (req, res) => {
       }
     });
 
-    // Sort by best match first
     matches.sort((a, b) => b.matchScore - a.matchScore);
 
     res.json({ success: true, matches: matches.slice(0, 5) });
