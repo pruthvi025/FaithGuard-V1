@@ -11,7 +11,10 @@ import HomePage from './pages/HomePage'
 import LostItemsFeed from './pages/LostItemsFeed'
 import ReportLostItem from './pages/ReportLostItem'
 import ReportFoundItem from './pages/ReportFoundItem'
+import CheckBeforeReportLost from './pages/CheckBeforeReportLost'
+import CheckBeforeReportFound from './pages/CheckBeforeReportFound'
 import ItemDetail from './pages/ItemDetail'
+import FoundItemDetail from './pages/FoundItemDetail'
 import CaseClosed from './pages/CaseClosed'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminLogin from './pages/AdminLogin'
@@ -50,10 +53,26 @@ function App() {
               }
             />
             <Route
+              path="/check-before-report"
+              element={
+                <ProtectedRoute>
+                  <CheckBeforeReportLost />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/report"
               element={
                 <ProtectedRoute>
                   <ReportLostItem />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/check-before-report-found"
+              element={
+                <ProtectedRoute>
+                  <CheckBeforeReportFound />
                 </ProtectedRoute>
               }
             />
@@ -70,6 +89,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ItemDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/found-item/:id"
+              element={
+                <ProtectedRoute>
+                  <FoundItemDetail />
                 </ProtectedRoute>
               }
             />

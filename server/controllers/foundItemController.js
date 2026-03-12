@@ -162,7 +162,7 @@ const updateFoundItemStatus = async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
 
-  if (!["found", "matched", "closed"].includes(status)) {
+  if (!["found", "matched", "closed", "recovery-in-progress"].includes(status)) {
     return res.status(400).json({ success: false, error: "Invalid status" });
   }
 
@@ -183,4 +183,65 @@ const updateFoundItemStatus = async (req, res) => {
   }
 };
 
-module.exports = { createFoundItem, getFoundItems, findMatches, updateFoundItemStatus };
+// -----------------------------------------------------------------
+// GET /api/found-items/:id
+// Get a single found item by ID
+// -----------------------------------------------------------------
+const getFoundItemById = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const doc = await db.collection("found_items").doc(id).get();
+
+    if (!doc.exists) {
+      return res.status(404).json({ success: false, error: "Found item not found" });
+    }
+
+    res.json({ success: true, item: { id: doc.id, ...doc.data() } });
+  } catch (error) {
+    console.error("❌ Get found item by ID error:", error);
+    res.status(500).json({ success: false, error: "Failed to fetch found item" });
+  }
+};
+
+// -----------------------------------------------------------------
+// PATCH /api/found-items/:id/share-location (protected)
+// Toggle location sharing for a found item (finder only)
+// -----------------------------------------------------------------
+const toggleLocationShared = async (req, res) => {
+  const { id } = req.params;
+  const { locationShared } = req.body;
+  const currentSessionId = req.session.sessionId;
+
+  try {
+    const docRef = db.collection("found_items").doc(id);
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
+      return res.status(404).json({ success: false, error: "Found item not found" });
+    }
+
+    const itemData = doc.data();
+
+    // Only the finder can toggle location sharing
+    if (itemData.finderSessionId !== currentSessionId) {
+      return res.status(403).json({ success: false, error: "Only the finder can share location" });
+    }
+
+    await docRef.update({
+      locationShared: !!locationShared,
+      updatedAt: new Date().toISOString(),
+    });
+
+    res.json({
+      success: true,
+      message: locationShared ? "Location shared" : "Location hidden",
+      locationShared: !!locationShared,
+    });
+  } catch (error) {
+    console.error("❌ Toggle location shared error:", error);
+    res.status(500).json({ success: false, error: "Failed to update location sharing" });
+  }
+};
+
+module.exports = { createFoundItem, getFoundItems, getFoundItemById, findMatches, updateFoundItemStatus, toggleLocationShared };

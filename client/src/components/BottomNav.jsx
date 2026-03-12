@@ -8,7 +8,7 @@ export default function BottomNav() {
   const items = [
     { key: 'home', label: 'Home', icon: Home, path: '/home' },
     { key: 'feed', label: 'Items', icon: Search, path: '/feed' },
-    { key: 'report', label: 'Report', icon: PlusCircle, path: '/report' },
+    { key: 'report', label: 'Report', icon: PlusCircle, path: '/check-before-report' },
   ]
 
   return (

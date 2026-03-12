@@ -124,7 +124,7 @@ export default function CaseClosed() {
               <Button
                 size="lg"
                 variant="secondary"
-                onClick={() => navigate('/report')}
+                onClick={() => navigate('/check-before-report')}
                 className="shadow-lg"
               >
                 <Sparkles className="w-5 h-5 mr-2 inline" />

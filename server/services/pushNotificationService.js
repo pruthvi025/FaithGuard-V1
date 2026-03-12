@@ -387,6 +387,48 @@ async function notifyClaimReceivedPriority(item, ownerSessionId) {
   }
 }
 
+// -----------------------------------------------------------------
+// Convenience: notify finder that someone claims a found item
+// -----------------------------------------------------------------
+function notifyFoundClaimReceived(item, finderSessionId) {
+  const notification = {
+    title: "📋 Someone claims this item belongs to them",
+    body: `A claim has been submitted for \"${item.title || 'a found item'}\"`,
+  };
+
+  const data = {
+    type: "found-claim-received",
+    foundItemId: item.id || "",
+    templeId: item.templeId || "",
+  };
+
+  notifySession(finderSessionId, notification, data).catch(
+    (err) => console.error("Push notification error:", err.message)
+  );
+}
+
+// -----------------------------------------------------------------
+// Convenience: notify owner about found claim approval/rejection
+// -----------------------------------------------------------------
+function notifyFoundClaimDecision(item, ownerSessionId, approved) {
+  const notification = {
+    title: approved ? "✅ Your claim was approved!" : "❌ Your claim was rejected",
+    body: approved
+      ? `Your claim for \"${item.title || 'a found item'}\" was approved. You can now chat with the finder.`
+      : `Your claim for \"${item.title || 'a found item'}\" was rejected.`,
+  };
+
+  const data = {
+    type: approved ? "found-claim-approved" : "found-claim-rejected",
+    foundItemId: item.id || "",
+    templeId: item.templeId || "",
+  };
+
+  notifySession(ownerSessionId, notification, data).catch(
+    (err) => console.error("Push notification error:", err.message)
+  );
+}
+
 module.exports = {
   notifyTemple,
   notifyNewLostItem,
@@ -397,5 +439,7 @@ module.exports = {
   notifyClaimDecision,
   notifyOwnerDirect,
   notifyClaimReceivedPriority,
+  notifyFoundClaimReceived,
+  notifyFoundClaimDecision,
 };
 

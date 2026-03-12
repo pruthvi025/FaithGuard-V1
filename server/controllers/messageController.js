@@ -172,8 +172,11 @@ const addMessage = async (req, res) => {
   }
 
   try {
-    // Verify the item exists
-    const itemDoc = await db.collection("items").doc(itemId).get();
+    // Verify the item exists in either items or found_items collection
+    let itemDoc = await db.collection("items").doc(itemId).get();
+    if (!itemDoc.exists) {
+      itemDoc = await db.collection("found_items").doc(itemId).get();
+    }
     if (!itemDoc.exists) {
       return res.status(404).json({ success: false, error: "Item not found" });
     }

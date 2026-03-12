@@ -145,27 +145,16 @@ export default function LostItemsFeed() {
                   Help reconnect items with their owners
                 </p>
               </div>
-              <div className="flex items-center gap-3">
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={handleRefresh}
-                  disabled={refreshing}
-                  className="w-10 h-10 rounded-xl bg-white border-2 border-gray-200 flex items-center justify-center text-[#475569] hover:border-[#F59E0B] hover:text-[#F59E0B] transition-colors shadow-sm disabled:opacity-50"
-                  title="Refresh items"
-                >
-                  <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
-                </motion.button>
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button
-                    onClick={() => navigate('/report')}
-                    className="flex items-center gap-2 shadow-lg"
-                  >
-                    <Plus className="w-5 h-5" />
-                    Report Item
-                  </Button>
-                </motion.div>
-              </div>
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="w-10 h-10 rounded-xl bg-white border-2 border-gray-200 flex items-center justify-center text-[#475569] hover:border-[#F59E0B] hover:text-[#F59E0B] transition-colors shadow-sm disabled:opacity-50"
+                title="Refresh items"
+              >
+                <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+              </motion.button>
             </div>
           </motion.div>
 
@@ -352,11 +341,7 @@ export default function LostItemsFeed() {
                   ? 'Try a different search term'
                   : 'Be the first to report a lost item'}
               </p>
-              {!searchQuery && (
-                <Button onClick={() => navigate('/report')} size="lg">
-                  Report Item
-                </Button>
-              )}
+
             </motion.div>
           )}
         </div>
@@ -375,7 +360,7 @@ export default function LostItemsFeed() {
                   Didn't find the item listed?
                 </p>
                 <Button
-                  onClick={() => navigate('/report-found')}
+                  onClick={() => navigate('/check-before-report-found')}
                   variant="secondary"
                   className="border-[#F59E0B] text-[#D97706] hover:bg-[#F59E0B]/10"
                 >

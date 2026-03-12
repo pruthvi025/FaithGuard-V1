@@ -459,3 +459,151 @@ export async function findMatchesForLostItem(templeId, title, category, descript
     return [];
   }
 }
+
+// =================================================================
+// Found Item Claim API
+// =================================================================
+
+// -----------------------------------------------------------------
+// Get a single found item by ID
+// -----------------------------------------------------------------
+export async function getFoundItemById(id) {
+  try {
+    const res = await fetch(`${API_URL}/api/found-items/${id}`, {
+      headers: authHeaders(),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Not found');
+    return data.item || null;
+  } catch (e) {
+    console.error('getFoundItemById error:', e);
+    return null;
+  }
+}
+
+// -----------------------------------------------------------------
+// Submit a claim for a found item (owner claims)
+// -----------------------------------------------------------------
+export async function submitFoundClaim(foundItemId, message) {
+  try {
+    const res = await fetch(`${API_URL}/api/found-claims/create`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ foundItemId, message: message || '' }),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Failed to submit claim');
+    return data.claim;
+  } catch (e) {
+    console.error('submitFoundClaim error:', e);
+    throw new Error(e.message || 'Failed to submit claim');
+  }
+}
+
+// -----------------------------------------------------------------
+// Get current user's claim status for a found item
+// -----------------------------------------------------------------
+export async function getFoundClaimStatus(foundItemId) {
+  try {
+    const res = await fetch(`${API_URL}/api/found-claims/status/${foundItemId}`, {
+      headers: authHeaders(),
+    });
+    const data = await res.json();
+    return data.claim || null;
+  } catch (e) {
+    console.error('getFoundClaimStatus error:', e);
+    return null;
+  }
+}
+
+// -----------------------------------------------------------------
+// Get all claims for a found item (for the finder)
+// -----------------------------------------------------------------
+export async function getFoundClaimsForItem(foundItemId) {
+  try {
+    const res = await fetch(`${API_URL}/api/found-claims/for-item/${foundItemId}`, {
+      headers: authHeaders(),
+    });
+    const data = await res.json();
+    return data.claims || [];
+  } catch (e) {
+    console.error('getFoundClaimsForItem error:', e);
+    return [];
+  }
+}
+
+// -----------------------------------------------------------------
+// Approve a found claim
+// -----------------------------------------------------------------
+export async function approveFoundClaim(claimId) {
+  try {
+    const res = await fetch(`${API_URL}/api/found-claims/approve`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ claimId }),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Failed to approve claim');
+    return data;
+  } catch (e) {
+    console.error('approveFoundClaim error:', e);
+    throw new Error(e.message || 'Failed to approve claim');
+  }
+}
+
+// -----------------------------------------------------------------
+// Reject a found claim
+// -----------------------------------------------------------------
+export async function rejectFoundClaim(claimId) {
+  try {
+    const res = await fetch(`${API_URL}/api/found-claims/reject`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ claimId }),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Failed to reject claim');
+    return data;
+  } catch (e) {
+    console.error('rejectFoundClaim error:', e);
+    throw new Error(e.message || 'Failed to reject claim');
+  }
+}
+
+// -----------------------------------------------------------------
+// Update found item status
+// -----------------------------------------------------------------
+export async function updateFoundItemStatusAPI(id, status) {
+  try {
+    const res = await fetch(`${API_URL}/api/found-items/${id}/status`, {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ status }),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Failed to update status');
+    return data;
+  } catch (e) {
+    console.error('updateFoundItemStatusAPI error:', e);
+    throw new Error(e.message || 'Failed to update status');
+  }
+}
+
+// -----------------------------------------------------------------
+// Toggle location sharing for a found item
+// -----------------------------------------------------------------
+export async function toggleFoundItemLocationSharing(id, locationShared) {
+  try {
+    const res = await fetch(`${API_URL}/api/found-items/${id}/share-location`, {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ locationShared }),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Failed to toggle location');
+    return data;
+  } catch (e) {
+    console.error('toggleFoundItemLocationSharing error:', e);
+    throw new Error(e.message || 'Failed to toggle location sharing');
+  }
+}

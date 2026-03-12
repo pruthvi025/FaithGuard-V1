@@ -176,7 +176,7 @@ export default function HomePage() {
               transition={{ duration: 0.2 }}
             >
               <Card
-                onClick={() => navigate('/report')}
+                onClick={() => navigate('/check-before-report')}
                 className="h-full cursor-pointer group"
               >
                 <div className="flex flex-col items-center text-center space-y-5 p-2">
@@ -200,7 +200,7 @@ export default function HomePage() {
                     className="w-full mt-4"
                     onClick={(e) => {
                       e.stopPropagation()
-                      navigate('/report')
+                      navigate('/check-before-report')
                     }}
                   >
                     <Plus className="w-5 h-5 mr-2 inline" />
@@ -251,7 +251,7 @@ export default function HomePage() {
                     className="w-full"
                     onClick={(e) => {
                       e.stopPropagation()
-                      navigate('/report-found')
+                      navigate('/check-before-report-found')
                     }}
                   >
                     + Report Found Item
