@@ -8,7 +8,9 @@ export default function NotificationToast({ notification, onDismiss }) {
   if (!notification) return null
 
   const handleClick = () => {
-    if (notification.data?.itemId) {
+    if (notification.data?.foundItemId) {
+      navigate(`/found-item/${notification.data.foundItemId}`)
+    } else if (notification.data?.itemId) {
       navigate(`/item/${notification.data.itemId}`)
     } else {
       navigate('/feed')

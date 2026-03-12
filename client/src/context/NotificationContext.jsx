@@ -53,7 +53,7 @@ export function NotificationProvider({ children }) {
     return unsubscribe
   }, [])
 
-  // Load FCM token when session becomes active
+  // Load/refresh FCM token when session becomes active
   useEffect(() => {
     if (!session || !isSessionValid()) {
       // Clear token if session invalid
@@ -62,14 +62,7 @@ export function NotificationProvider({ children }) {
       return
     }
 
-    // Check if we already have a token for this session
-    const storedToken = getStoredFCMToken(session.id, session.templeCode)
-    if (storedToken) {
-      setFcmToken(storedToken)
-      return
-    }
-
-    // If permission is granted, get new token
+    // Always refresh FCM token on app load (handles browser refresh, token rotation)
     if (permission === 'granted') {
       getFCMToken(session.id, session.templeCode)
         .then((token) => {

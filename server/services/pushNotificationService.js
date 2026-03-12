@@ -205,56 +205,79 @@ async function removeInvalidToken(token) {
 // -----------------------------------------------------------------
 async function notifySession(sessionId, notification, data = {}) {
   try {
-    // Fetch the FCM token for this specific session
-    const tokenDoc = await db.collection("fcm_tokens").doc(sessionId).get();
+    // Fetch ALL FCM tokens for this session (multi-device support)
+    const snapshot = await db.collection("fcm_tokens")
+      .where("sessionId", "==", sessionId)
+      .where("isActive", "==", true)
+      .get();
 
-    if (!tokenDoc.exists) {
-      console.log(`📭 No FCM token for session ${sessionId} — skipping notification`);
+    if (snapshot.empty) {
+      console.log(`📭 No FCM tokens for session ${sessionId} — skipping notification`);
       return { sent: 0, failed: 0 };
     }
 
-    const tokenData = tokenDoc.data();
+    const now = new Date();
+    const tokens = [];
+    const expiredDocs = [];
 
-    // Skip expired or inactive tokens
-    if (!tokenData.isActive || (tokenData.expiresAt && new Date(tokenData.expiresAt) <= new Date())) {
-      console.log(`📭 Token expired/inactive for session ${sessionId}`);
-      return { sent: 0, failed: 0 };
-    }
-
-    if (!tokenData.token) {
-      console.log(`📭 No valid token string for session ${sessionId}`);
-      return { sent: 0, failed: 0 };
-    }
-
-    // Send to this specific token
-    const message = {
-      notification: {
-        title: notification.title,
-        body: notification.body,
-      },
-      data: Object.fromEntries(
-        Object.entries(data).map(([k, v]) => [k, String(v)])
-      ),
-      token: tokenData.token,
-    };
-
-    try {
-      await admin.messaging().send(message);
-      console.log(`🔔 Notification sent to session ${sessionId}`);
-      return { sent: 1, failed: 0 };
-    } catch (sendError) {
-      console.warn(`⚠ Notification to session ${sessionId} failed:`, sendError.code || sendError.message);
-
-      // Remove invalid tokens
-      if (
-        sendError.code === "messaging/invalid-registration-token" ||
-        sendError.code === "messaging/registration-token-not-registered"
-      ) {
-        removeInvalidToken(tokenData.token);
+    snapshot.forEach((doc) => {
+      const d = doc.data();
+      // Skip expired tokens
+      if (d.expiresAt && new Date(d.expiresAt) <= now) {
+        expiredDocs.push(doc.id);
+        return;
       }
+      if (d.token) {
+        tokens.push(d.token);
+      }
+    });
 
-      return { sent: 0, failed: 1 };
+    // Clean up expired tokens in background
+    if (expiredDocs.length > 0) {
+      cleanupExpiredTokens(expiredDocs);
     }
+
+    if (tokens.length === 0) {
+      console.log(`📭 No valid tokens for session ${sessionId}`);
+      return { sent: 0, failed: 0 };
+    }
+
+    // De-duplicate tokens
+    const uniqueTokens = [...new Set(tokens)];
+    const results = { sent: 0, failed: 0 };
+
+    // Send to all devices for this session
+    for (const token of uniqueTokens) {
+      const message = {
+        notification: {
+          title: notification.title,
+          body: notification.body,
+        },
+        data: Object.fromEntries(
+          Object.entries(data).map(([k, v]) => [k, String(v)])
+        ),
+        token,
+      };
+
+      try {
+        await admin.messaging().send(message);
+        results.sent++;
+      } catch (sendError) {
+        console.warn(`⚠ Notification to session ${sessionId} device failed:`, sendError.code || sendError.message);
+        results.failed++;
+
+        // Remove invalid tokens
+        if (
+          sendError.code === "messaging/invalid-registration-token" ||
+          sendError.code === "messaging/registration-token-not-registered"
+        ) {
+          removeInvalidToken(token);
+        }
+      }
+    }
+
+    console.log(`🔔 Notification sent to session ${sessionId}: ${results.sent}/${uniqueTokens.length} devices`);
+    return results;
   } catch (error) {
     console.error("❌ notifySession error:", error.message);
     return { sent: 0, failed: 0 };

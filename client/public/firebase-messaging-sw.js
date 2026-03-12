@@ -49,10 +49,16 @@ self.addEventListener('notificationclick', (event) => {
 
   // Extract data from notification
   const data = event.notification.data || {}
+  const foundItemId = data.foundItemId
   const itemId = data.itemId
 
   // Open the app and navigate to the relevant item
-  const urlToOpen = itemId ? `/item/${itemId}` : '/home'
+  let urlToOpen = '/home'
+  if (foundItemId) {
+    urlToOpen = `/found-item/${foundItemId}`
+  } else if (itemId) {
+    urlToOpen = `/item/${itemId}`
+  }
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {

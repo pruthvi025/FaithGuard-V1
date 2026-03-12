@@ -20,19 +20,32 @@ const storeToken = async (req, res) => {
   }
 
   try {
+    // Check if this exact token already exists for this session
+    const existing = await db.collection("fcm_tokens")
+      .where("sessionId", "==", session.sessionId)
+      .where("token", "==", token)
+      .get();
+
     const tokenData = {
       token,
       sessionId: session.sessionId,
       templeId: session.templeId,
-      createdAt: new Date().toISOString(),
-      expiresAt: session.expiresAt, // expires when session expires
+      updatedAt: new Date().toISOString(),
+      expiresAt: session.expiresAt,
       isActive: true,
     };
 
-    // Use sessionId as document ID (one token per session)
-    await db.collection("fcm_tokens").doc(session.sessionId).set(tokenData);
-
-    console.log(`✅ FCM token stored for session: ${session.sessionId}`);
+    if (!existing.empty) {
+      // Update existing token doc (refresh expiry/active status)
+      const docId = existing.docs[0].id;
+      await db.collection("fcm_tokens").doc(docId).update(tokenData);
+      console.log(`🔄 FCM token refreshed for session: ${session.sessionId}`);
+    } else {
+      // Create new token doc — allows multi-device (multiple tokens per session)
+      tokenData.createdAt = new Date().toISOString();
+      await db.collection("fcm_tokens").add(tokenData);
+      console.log(`✅ New FCM token stored for session: ${session.sessionId}`);
+    }
 
     res.json({ success: true, message: "Token stored" });
   } catch (error) {
@@ -49,9 +62,18 @@ const removeToken = async (req, res) => {
   const session = req.session;
 
   try {
-    await db.collection("fcm_tokens").doc(session.sessionId).delete();
+    // Find all tokens for this session and delete them
+    const snapshot = await db.collection("fcm_tokens")
+      .where("sessionId", "==", session.sessionId)
+      .get();
 
-    console.log(`✅ FCM token removed for session: ${session.sessionId}`);
+    if (!snapshot.empty) {
+      const batch = db.batch();
+      snapshot.forEach((doc) => batch.delete(doc.ref));
+      await batch.commit();
+    }
+
+    console.log(`✅ FCM tokens removed for session: ${session.sessionId}`);
 
     res.json({ success: true, message: "Token removed" });
   } catch (error) {
