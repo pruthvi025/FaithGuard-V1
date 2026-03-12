@@ -185,7 +185,20 @@ export default function ItemDetail() {
 
     // Determine the receiver
     const receiverSid = isReporter ? selectedPeer : item.reporterSessionId
-    if (!receiverSid) return
+    console.log('[Chat Debug] handleSend:', {
+      isReporter,
+      receiverSid,
+      sessionToken: session.sessionToken,
+      reporterSessionId: item.reporterSessionId,
+      selectedPeer,
+      itemId: item.id,
+    })
+
+    if (!receiverSid) {
+      console.error('[Chat Debug] No receiverSid — cannot send')
+      alert('Cannot send message: no recipient found. Please refresh and try again.')
+      return
+    }
 
     try {
       const newMessage = await addMessageToItem(item.id, message, receiverSid)
@@ -201,7 +214,8 @@ export default function ItemDetail() {
       setMessages(updatedMessages)
       setMessage('')
     } catch (error) {
-      console.error('Failed to send message:', error)
+      console.error('[Chat Debug] Failed to send message:', error)
+      alert('Failed to send message: ' + error.message)
     }
   }
 
