@@ -202,21 +202,7 @@ export default function CheckBeforeReportFound() {
                 </motion.div>
               ))}
 
-              {/* Bottom CTA repeated */}
-              <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: items.length * 0.05 + 0.1 }}
-                className="pt-2"
-              >
-                <button
-                  onClick={() => navigate('/report-found')}
-                  className="w-full flex items-center justify-between px-5 py-4 rounded-2xl border-2 border-dashed border-indigo-400 bg-indigo-50 text-indigo-700 font-semibold hover:bg-indigo-100 transition-colors group"
-                >
-                  <span>Not listed → Report Found Item</span>
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </button>
-              </motion.div>
+
             </div>
           )}
         </div>
