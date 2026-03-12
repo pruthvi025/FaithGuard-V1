@@ -245,6 +245,17 @@ export default function HomePage() {
                   >
                     Browse Items
                   </Button>
+                  <Button
+                    variant="secondary"
+                    size="lg"
+                    className="w-full"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      navigate('/report-found')
+                    }}
+                  >
+                    + Report Found Item
+                  </Button>
                 </div>
               </Card>
             </motion.div>

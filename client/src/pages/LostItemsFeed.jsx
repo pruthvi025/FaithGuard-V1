@@ -361,8 +361,8 @@ export default function LostItemsFeed() {
           )}
         </div>
 
-        {/* Found Item CTA — shown when items exist */}
-        {filteredItems.length > 0 && (
+        {/* Found Item CTA — always visible */}
+        {(
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
