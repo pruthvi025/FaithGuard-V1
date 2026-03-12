@@ -717,7 +717,7 @@ export default function ItemDetail() {
                                       isMyMessage ? 'text-white/70' : 'text-gray-500'
                                     }`}
                                   >
-                                    {formatTimeAgo(msg.createdAt)}
+                                    {formatTimeAgo(msg.timestamp || msg.createdAt)}
                                   </p>
                                 </motion.div>
                               </motion.div>

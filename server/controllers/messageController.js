@@ -3,7 +3,10 @@
 // ============================================
 // Handles private 1:1 conversations per item via Firestore.
 // Each conversation is isolated between two specific users.
-// Collection: "messages"
+//
+// Firestore structure:
+//   conversations/{conversationId}          — conversation metadata
+//   conversations/{conversationId}/messages  — message subcollection
 
 const { db } = require("../config/firebase");
 const { v4: uuidv4 } = require("uuid");
@@ -11,6 +14,8 @@ const { v4: uuidv4 } = require("uuid");
 /**
  * Generate a deterministic conversationId from itemId + two session IDs.
  * Sorting ensures both participants produce the same ID.
+ *
+ * Example: item123_session45_session78
  */
 function buildConversationId(itemId, sessionA, sessionB) {
   const sorted = [sessionA, sessionB].sort();
@@ -27,57 +32,43 @@ const getConversations = async (req, res) => {
   const currentSessionId = req.session.sessionId;
 
   try {
-    // Fetch all messages for this item where the current user is involved
-    const senderSnapshot = await db
-      .collection("messages")
+    // Query conversations where the current user is participantA
+    const asASnapshot = await db
+      .collection("conversations")
       .where("itemId", "==", itemId)
-      .where("senderSessionId", "==", currentSessionId)
+      .where("participantA", "==", currentSessionId)
       .get();
 
-    const receiverSnapshot = await db
-      .collection("messages")
+    // Query conversations where the current user is participantB
+    const asBSnapshot = await db
+      .collection("conversations")
       .where("itemId", "==", itemId)
-      .where("receiverSessionId", "==", currentSessionId)
+      .where("participantB", "==", currentSessionId)
       .get();
 
-    // Merge results, keyed by conversationId
-    const conversationMap = {};
+    const conversations = [];
 
-    const processDoc = (doc) => {
-      const data = { id: doc.id, ...doc.data() };
-      const convId = data.conversationId;
-      if (!convId) return; // skip old messages without conversationId
+    const processConvDoc = (doc) => {
+      const data = doc.data();
+      const peerSessionId =
+        data.participantA === currentSessionId
+          ? data.participantB
+          : data.participantA;
 
-      if (!conversationMap[convId]) {
-        // Determine the peer session ID
-        const peerSessionId =
-          data.senderSessionId === currentSessionId
-            ? data.receiverSessionId
-            : data.senderSessionId;
-
-        conversationMap[convId] = {
-          conversationId: convId,
-          peerSessionId,
-          lastMessage: data.text,
-          lastMessageAt: data.createdAt,
-          messageCount: 0,
-        };
-      }
-
-      conversationMap[convId].messageCount++;
-
-      // Track the latest message
-      if (data.createdAt > conversationMap[convId].lastMessageAt) {
-        conversationMap[convId].lastMessage = data.text;
-        conversationMap[convId].lastMessageAt = data.createdAt;
-      }
+      conversations.push({
+        conversationId: doc.id,
+        peerSessionId,
+        lastMessage: data.lastMessage || "",
+        lastMessageAt: data.lastMessageAt || data.createdAt,
+        messageCount: data.messageCount || 0,
+      });
     };
 
-    senderSnapshot.forEach(processDoc);
-    receiverSnapshot.forEach(processDoc);
+    asASnapshot.forEach(processConvDoc);
+    asBSnapshot.forEach(processConvDoc);
 
-    // Convert to array and sort by most recent
-    const conversations = Object.values(conversationMap).sort(
+    // Sort by most recent message first
+    conversations.sort(
       (a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt)
     );
 
@@ -90,7 +81,7 @@ const getConversations = async (req, res) => {
 
 // -----------------------------------------------------------------
 // GET /api/messages/:itemId/:peerSessionId (protected)
-// Get messages for a specific 1:1 conversation
+// Get messages for a specific 1:1 conversation (subcollection)
 // -----------------------------------------------------------------
 const getMessages = async (req, res) => {
   const { itemId, peerSessionId } = req.params;
@@ -99,9 +90,25 @@ const getMessages = async (req, res) => {
   const conversationId = buildConversationId(itemId, currentSessionId, peerSessionId);
 
   try {
+    // Verify the current user is a participant (security check)
+    const convDoc = await db.collection("conversations").doc(conversationId).get();
+
+    if (convDoc.exists) {
+      const convData = convDoc.data();
+      if (
+        convData.participantA !== currentSessionId &&
+        convData.participantB !== currentSessionId
+      ) {
+        return res.status(403).json({ success: false, error: "Access denied" });
+      }
+    }
+
+    // Fetch messages from the subcollection
     const snapshot = await db
+      .collection("conversations")
+      .doc(conversationId)
       .collection("messages")
-      .where("conversationId", "==", conversationId)
+      .orderBy("timestamp", "asc")
       .get();
 
     const messages = [];
@@ -109,11 +116,31 @@ const getMessages = async (req, res) => {
       messages.push({ id: doc.id, ...doc.data() });
     });
 
-    // Sort by oldest first
-    messages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-
     res.json({ success: true, messages });
   } catch (error) {
+    // If orderBy fails due to missing index, fallback to JS-side sort
+    if (error.code === 9) {
+      try {
+        const snapshot = await db
+          .collection("conversations")
+          .doc(conversationId)
+          .collection("messages")
+          .get();
+
+        const messages = [];
+        snapshot.forEach((doc) => {
+          messages.push({ id: doc.id, ...doc.data() });
+        });
+
+        messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+        return res.json({ success: true, messages });
+      } catch (fallbackError) {
+        console.error("❌ Get messages fallback error:", fallbackError);
+        return res.status(500).json({ success: false, error: "Failed to fetch messages" });
+      }
+    }
+
     console.error("❌ Get messages error:", error);
     res.status(500).json({ success: false, error: "Failed to fetch messages" });
   }
@@ -122,6 +149,7 @@ const getMessages = async (req, res) => {
 // -----------------------------------------------------------------
 // POST /api/messages/:itemId (protected)
 // Add a message to a specific 1:1 conversation
+// Creates the conversation document if it doesn't exist yet.
 // -----------------------------------------------------------------
 const addMessage = async (req, res) => {
   const { itemId } = req.params;
@@ -149,19 +177,49 @@ const addMessage = async (req, res) => {
       return res.status(404).json({ success: false, error: "Item not found" });
     }
 
-    const conversationId = buildConversationId(itemId, session.sessionId, receiverSessionId);
+    const senderSessionId = session.sessionId;
+    const conversationId = buildConversationId(itemId, senderSessionId, receiverSessionId);
+    const now = new Date().toISOString();
 
+    // 1. Check if conversation exists; if not, create it
+    const convRef = db.collection("conversations").doc(conversationId);
+    const convDoc = await convRef.get();
+
+    if (!convDoc.exists) {
+      // Determine participants — sorted order matches conversationId
+      const sorted = [senderSessionId, receiverSessionId].sort();
+
+      await convRef.set({
+        conversationId,
+        itemId,
+        participantA: sorted[0],
+        participantB: sorted[1],
+        createdAt: now,
+        lastMessage: text.trim(),
+        lastMessageAt: now,
+        messageCount: 1,
+      });
+
+      console.log(`✅ Conversation created: ${conversationId}`);
+    } else {
+      // Update conversation metadata
+      await convRef.update({
+        lastMessage: text.trim(),
+        lastMessageAt: now,
+        messageCount: (convDoc.data().messageCount || 0) + 1,
+      });
+    }
+
+    // 2. Save message in the subcollection
     const messageId = uuidv4();
     const newMessage = {
-      itemId,
-      conversationId,
-      senderSessionId: session.sessionId,
+      senderSessionId,
       receiverSessionId,
       text: text.trim(),
-      createdAt: new Date().toISOString(),
+      timestamp: now,
     };
 
-    await db.collection("messages").doc(messageId).set(newMessage);
+    await convRef.collection("messages").doc(messageId).set(newMessage);
 
     console.log(`✅ Message added to conversation ${conversationId}`);
 
