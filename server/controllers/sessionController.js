@@ -28,7 +28,7 @@ const checkin = async (req, res) => {
     });
   }
 
-  const normalizedTempleId = templeId.trim().toUpperCase();
+  const normalizedTempleId = templeId.trim().toLowerCase();
 
   try {
     // --- Validate temple exists in Firestore ---

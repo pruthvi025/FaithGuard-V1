@@ -60,7 +60,7 @@ export default function CheckInPage() {
     setLoading(true)
     setError(null)
 
-    createSession(qrTempleId, 'qr')
+    createSession(qrTempleId.trim().toLowerCase(), 'qr')
       .then(() => {
         setAutoCheckedIn(true)
         // Brief success flash before navigating
@@ -82,10 +82,16 @@ export default function CheckInPage() {
 
     const templeId =
       selectedMethod === 'qr'
-        ? 'TEMPLE_001' // default for demo when no QR URL param
-        : manualCode.trim().toUpperCase()
+        ? 'temple_001' // default for demo when no QR URL param
+        : manualCode.trim().toLowerCase()
 
     if (!templeId) return
+
+    // Validate temple_### format for manual entry
+    if (selectedMethod === 'code' && !/^temple_\d{3,}$/.test(templeId)) {
+      setError('Invalid format. Temple code must be like: temple_001')
+      return
+    }
 
     setLoading(true)
     try {
@@ -127,7 +133,7 @@ export default function CheckInPage() {
     }
 
     try {
-      await createSession(templeId, 'qr')
+      await createSession(templeId.trim().toLowerCase(), 'qr')
       setAutoCheckedIn(true)
       setTimeout(() => navigate('/home', { replace: true }), 1200)
     } catch (err) {
@@ -301,7 +307,7 @@ export default function CheckInPage() {
                     Manually enter the unique temple code shown at the entrance.
                   </p>
                   <Input
-                    placeholder="e.g. TEMPLE_001"
+                    placeholder="e.g. temple_001"
                     value={manualCode}
                     onChange={(e) => {
                       setManualCode(e.target.value)

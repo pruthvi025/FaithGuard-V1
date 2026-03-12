@@ -7,10 +7,13 @@ const API_URL = import.meta.env.VITE_API_URL || ''
 // Creates a new anonymous session for the given templeId.
 // Returns { sessionToken, expiresAt }
 export async function checkIn(templeId) {
+  // Normalize temple ID — always lowercase, trimmed
+  const normalizedTempleId = templeId.trim().toLowerCase();
+
   const res = await fetch(`${API_URL}/api/session/checkin`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ templeId }),
+    body: JSON.stringify({ templeId: normalizedTempleId }),
   })
 
   if (!res.ok) {
