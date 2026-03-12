@@ -13,6 +13,7 @@ const itemRoutes = require("./routes/itemRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const claimRoutes = require("./routes/claimRoutes");
 
 const app = express();
 
@@ -30,6 +31,7 @@ app.use("/api/items", itemRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/claims", claimRoutes);
 
 // ---- 404 Handler ----
 app.use((req, res) => {

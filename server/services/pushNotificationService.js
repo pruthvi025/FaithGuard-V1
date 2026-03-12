@@ -283,4 +283,55 @@ function notifyNewMessage(item, conversationId, receiverSessionId) {
   );
 }
 
-module.exports = { notifyTemple, notifyNewLostItem, notifyItemFound, notifySession, notifyNewMessage };
+// -----------------------------------------------------------------
+// Convenience: notify item owner about a new claim
+// -----------------------------------------------------------------
+function notifyClaimReceived(item, ownerSessionId) {
+  const notification = {
+    title: "📋 Someone claims they found your item",
+    body: `A claim has been submitted for "${item.title || 'your lost item'}"`,
+  };
+
+  const data = {
+    type: "claim-received",
+    itemId: item.id || "",
+    templeId: item.templeId || "",
+  };
+
+  notifySession(ownerSessionId, notification, data).catch(
+    (err) => console.error("Push notification error:", err.message)
+  );
+}
+
+// -----------------------------------------------------------------
+// Convenience: notify finder about claim approval/rejection
+// -----------------------------------------------------------------
+function notifyClaimDecision(item, finderSessionId, approved) {
+  const notification = {
+    title: approved ? "✅ Your claim was approved!" : "❌ Your claim was rejected",
+    body: approved
+      ? `Your claim for "${item.title || 'a lost item'}" was approved. You can now view the location.`
+      : `Your claim for "${item.title || 'a lost item'}" was rejected.`,
+  };
+
+  const data = {
+    type: approved ? "claim-approved" : "claim-rejected",
+    itemId: item.id || "",
+    templeId: item.templeId || "",
+  };
+
+  notifySession(finderSessionId, notification, data).catch(
+    (err) => console.error("Push notification error:", err.message)
+  );
+}
+
+module.exports = {
+  notifyTemple,
+  notifyNewLostItem,
+  notifyItemFound,
+  notifySession,
+  notifyNewMessage,
+  notifyClaimReceived,
+  notifyClaimDecision,
+};
+

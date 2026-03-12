@@ -317,7 +317,7 @@ export default function LostItemsFeed() {
                               {formatTimeAgo(item.createdAt)}
                             </span>
                             {item.location && (
-                              <span className="truncate">📍 {item.location}</span>
+                              <span className="truncate text-gray-400 flex items-center gap-1">🔒 Location protected</span>
                             )}
                           </div>
                         </div>

@@ -14,6 +14,11 @@ import {
   Locate,
   Heart,
   X,
+  Camera,
+  ShieldCheck,
+  ShieldX,
+  Lock,
+  Eye,
 } from 'lucide-react'
 import { useSession } from '../context/SessionContext'
 import {
@@ -23,6 +28,11 @@ import {
   getMessagesForConversation,
   getConversationsForItem,
   addMessageToItem,
+  submitClaim,
+  getClaimStatus,
+  getClaimsForItem,
+  approveClaim as approveClaimAPI,
+  rejectClaim as rejectClaimAPI,
 } from '../services/itemService'
 import {
   notifyItemFound,
@@ -60,6 +70,13 @@ const statusConfig = {
     text: 'text-gray-700',
     border: 'border-gray-200',
     label: 'Closed',
+  },
+  'recovery-in-progress': {
+    icon: ShieldCheck,
+    bg: 'bg-blue-100',
+    text: 'text-blue-700',
+    border: 'border-blue-200',
+    label: 'Recovery',
   },
 }
 
@@ -102,8 +119,16 @@ export default function ItemDetail() {
   const [isLocationActive, setIsLocationActive] = useState(false)
   const [locationError, setLocationError] = useState(null)
   const [userPosition, setUserPosition] = useState(null)
-  const [otherPosition] = useState(null) // placeholder until peer sharing is available
+  const [otherPosition] = useState(null)
   const watchIdRef = useRef(null)
+
+  // Claim state
+  const [myClaim, setMyClaim] = useState(null)
+  const [itemClaims, setItemClaims] = useState([])
+  const [showClaimForm, setShowClaimForm] = useState(false)
+  const [claimImage, setClaimImage] = useState(null)
+  const [claimMessage, setClaimMessage] = useState('')
+  const [isSubmittingClaim, setIsSubmittingClaim] = useState(false)
 
   const isReporter = item && session && item.reporterSessionId === session.sessionToken
 
@@ -137,21 +162,28 @@ export default function ItemDetail() {
       const currentIsReporter = itemData.reporterSessionId === session?.sessionToken
 
       if (currentIsReporter) {
-        // Reporter: load conversation list
+        // Reporter: load conversation list + claims
         const convos = await getConversationsForItem(id)
         setConversations(convos)
+        const claims = await getClaimsForItem(id)
+        setItemClaims(claims)
 
-        // If a peer is selected, load that conversation
         if (selectedPeer) {
           const convoMessages = await getMessagesForConversation(id, selectedPeer)
           setMessages(convoMessages)
         }
       } else {
-        // Non-reporter: always chat with the reporter
-        const peerSid = itemData.reporterSessionId
-        if (peerSid) {
-          const convoMessages = await getMessagesForConversation(id, peerSid)
-          setMessages(convoMessages)
+        // Non-reporter: load own claim status
+        const claimData = await getClaimStatus(id)
+        setMyClaim(claimData)
+
+        // Only load chat if claim is approved
+        if (claimData?.status === 'approved') {
+          const peerSid = itemData.reporterSessionId
+          if (peerSid) {
+            const convoMessages = await getMessagesForConversation(id, peerSid)
+            setMessages(convoMessages)
+          }
         }
       }
 
@@ -255,6 +287,55 @@ export default function ItemDetail() {
       console.error('Failed to remove reward:', error)
     }
   }
+
+  // ---------------------------------------------------------------
+  // Claim handlers
+  // ---------------------------------------------------------------
+  const handleClaimImageChange = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onloadend = () => setClaimImage(reader.result)
+    reader.readAsDataURL(file)
+  }
+
+  const handleSubmitClaim = async () => {
+    if (!claimImage || isSubmittingClaim) return
+
+    setIsSubmittingClaim(true)
+    try {
+      const claim = await submitClaim(item.id, claimImage, claimMessage)
+      setMyClaim(claim)
+      setShowClaimForm(false)
+      setClaimImage(null)
+      setClaimMessage('')
+    } catch (error) {
+      alert('Failed to submit claim: ' + error.message)
+    } finally {
+      setIsSubmittingClaim(false)
+    }
+  }
+
+  const handleApproveClaim = async (claimId) => {
+    try {
+      await approveClaimAPI(claimId)
+      // Reload will happen via the interval
+    } catch (error) {
+      alert('Failed to approve claim: ' + error.message)
+    }
+  }
+
+  const handleRejectClaim = async (claimId) => {
+    try {
+      await rejectClaimAPI(claimId)
+    } catch (error) {
+      alert('Failed to reject claim: ' + error.message)
+    }
+  }
+
+  // Should this user see the location?
+  const canSeeLocation = isReporter || myClaim?.status === 'approved'
 
   const handleCloseCase = async () => {
     if (!item || !session || !isReporter) return
@@ -426,7 +507,14 @@ export default function ItemDetail() {
                       <div className="flex items-center gap-3 text-[#475569]">
                         <MapPin className="w-5 h-5 text-[#F59E0B]" />
                         <span className="font-medium">Location:</span>
-                        <span>{item.location}</span>
+                        {canSeeLocation ? (
+                          <span>{item.location}</span>
+                        ) : (
+                          <span className="flex items-center gap-1.5 text-gray-400 italic">
+                            <Lock className="w-3.5 h-3.5" />
+                            Hidden until claim approval
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-3 text-[#475569]">
                         <Clock className="w-5 h-5 text-[#F59E0B]" />
@@ -559,20 +647,167 @@ export default function ItemDetail() {
                     </div>
                   )}
 
-                  {/* Action Buttons */}
+                  {/* Action Buttons + Claim System */}
                   <div className="space-y-3 pt-4 border-t border-gray-200">
+
+                    {/* Non-reporter: Claim button or claim status */}
                     {item.status === 'active' && !isReporter && (
-                      <Button
-                        onClick={handleMarkAsFound}
-                        disabled={isMarkingFound}
-                        className="w-full"
+                      <>
+                        {!myClaim && !showClaimForm && (
+                          <Button
+                            onClick={() => setShowClaimForm(true)}
+                            className="w-full"
+                          >
+                            <Camera className="w-5 h-5 mr-2 inline" />
+                            Claim This Item
+                          </Button>
+                        )}
+
+                        {/* Claim submission form */}
+                        {showClaimForm && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-4"
+                          >
+                            <div className="flex items-center justify-between">
+                              <h3 className="text-sm font-semibold text-blue-800">Submit Your Claim</h3>
+                              <button onClick={() => { setShowClaimForm(false); setClaimImage(null); setClaimMessage('') }} className="text-gray-400 hover:text-gray-600">
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-blue-700 mb-1">
+                                Upload photo of the item you found *
+                              </label>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                onChange={handleClaimImageChange}
+                                className="w-full text-xs file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white file:font-medium file:cursor-pointer"
+                              />
+                              {claimImage && (
+                                <img
+                                  src={claimImage}
+                                  alt="Preview"
+                                  className="mt-2 w-full h-32 object-cover rounded-lg border border-blue-200"
+                                />
+                              )}
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-blue-700 mb-1">
+                                Message (optional)
+                              </label>
+                              <textarea
+                                value={claimMessage}
+                                onChange={(e) => setClaimMessage(e.target.value)}
+                                placeholder="Describe how/where you found it..."
+                                className="w-full px-3 py-2 text-sm rounded-lg border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+                                rows={3}
+                              />
+                            </div>
+                            <Button
+                              onClick={handleSubmitClaim}
+                              disabled={!claimImage || isSubmittingClaim}
+                              className="w-full"
+                            >
+                              {isSubmittingClaim ? 'Submitting...' : 'Submit Claim'}
+                            </Button>
+                          </motion.div>
+                        )}
+
+                        {/* Claim status */}
+                        {myClaim?.status === 'pending' && (
+                          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3">
+                            <Clock className="w-5 h-5 text-amber-600" />
+                            <p className="text-sm text-amber-800 font-medium">
+                              Your claim is pending review by the owner.
+                            </p>
+                          </div>
+                        )}
+                        {myClaim?.status === 'approved' && (
+                          <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
+                            <ShieldCheck className="w-5 h-5 text-green-600 mt-0.5" />
+                            <div>
+                              <p className="text-sm text-green-800 font-semibold">
+                                Claim approved! Location revealed.
+                              </p>
+                              <p className="text-xs text-green-700 mt-1">
+                                You can now chat with the owner to arrange the handover.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                        {myClaim?.status === 'rejected' && (
+                          <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
+                            <ShieldX className="w-5 h-5 text-red-600" />
+                            <p className="text-sm text-red-800 font-medium">
+                              Your claim was rejected by the owner.
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {/* Owner: Review pending claims */}
+                    {isReporter && itemClaims.filter(c => c.status === 'pending').length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="space-y-3"
                       >
-                        <CheckCircle2 className="w-5 h-5 mr-2 inline" />
-                        {isMarkingFound ? 'Marking...' : 'I Found This Item'}
-                      </Button>
+                        <h3 className="text-sm font-semibold text-[#1E293B] flex items-center gap-2">
+                          <Eye className="w-4 h-4 text-[#F59E0B]" />
+                          Pending Claims ({itemClaims.filter(c => c.status === 'pending').length})
+                        </h3>
+                        {itemClaims.filter(c => c.status === 'pending').map((claim) => (
+                          <div key={claim.claimId} className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+                            <img
+                              src={claim.foundItemImage}
+                              alt="Claim photo"
+                              className="w-full h-40 object-cover rounded-lg border border-amber-200"
+                            />
+                            {claim.message && (
+                              <p className="text-sm text-gray-700 italic">"{claim.message}"</p>
+                            )}
+                            <p className="text-xs text-gray-500">
+                              Submitted {formatTimeAgo(claim.createdAt)}
+                            </p>
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={() => handleApproveClaim(claim.claimId)}
+                                className="flex-1 bg-green-600 hover:bg-green-700"
+                              >
+                                <CheckCircle2 className="w-4 h-4 mr-1 inline" />
+                                Approve
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                onClick={() => handleRejectClaim(claim.claimId)}
+                                className="flex-1"
+                              >
+                                <XCircle className="w-4 h-4 mr-1 inline" />
+                                Reject
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </motion.div>
                     )}
 
                     {item.status === 'found' && isReporter && (
+                      <Button
+                        onClick={handleCloseCase}
+                        disabled={isClosing}
+                        className="w-full bg-green-600 hover:bg-green-700"
+                      >
+                        <CheckCircle2 className="w-5 h-5 mr-2 inline" />
+                        {isClosing ? 'Closing...' : 'Close Case - Item Returned'}
+                      </Button>
+                    )}
+
+                    {item.status === 'recovery-in-progress' && isReporter && (
                       <Button
                         onClick={handleCloseCase}
                         disabled={isClosing}
@@ -614,6 +849,16 @@ export default function ItemDetail() {
               animate={{ opacity: 1, x: 0 }}
               className="flex flex-col"
             >
+              {/* Gate chat: non-reporters need an approved claim */}
+              {(!isReporter && myClaim?.status !== 'approved') ? (
+                <Card className="flex-1 flex flex-col min-h-[500px] items-center justify-center text-center">
+                  <Lock className="w-12 h-12 text-gray-300 mb-4" />
+                  <h2 className="text-lg font-semibold text-[#1E293B] mb-2">Chat Locked</h2>
+                  <p className="text-sm text-[#475569] max-w-xs">
+                    Submit a claim and get it approved by the owner to start chatting.
+                  </p>
+                </Card>
+              ) : (
               <Card className="flex-1 flex flex-col min-h-[500px]">
                 {/* Safety Banner */}
                 <div className="mb-4 rounded-xl bg-orange-50 border border-orange-200 px-4 py-3 flex items-start gap-2 text-xs text-orange-800">
@@ -775,6 +1020,7 @@ export default function ItemDetail() {
                   </>
                 )}
               </Card>
+              )}
             </motion.div>
           </div>
         </div>

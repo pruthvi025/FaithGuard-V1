@@ -276,3 +276,107 @@ export async function checkForDuplicates(title, description, templeCode) {
     return [];
   }
 }
+
+// -----------------------------------------------------------------
+// Submit a claim for a lost item
+// -----------------------------------------------------------------
+export async function submitClaim(itemId, foundItemImage, message) {
+  try {
+    const res = await fetch(`${API_URL}/api/claims/create`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ itemId, foundItemImage, message }),
+    });
+
+    const data = await res.json();
+
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to submit claim');
+    }
+
+    return data.claim;
+  } catch (e) {
+    console.error('submitClaim error:', e);
+    throw new Error(e.message || 'Failed to submit claim');
+  }
+}
+
+// -----------------------------------------------------------------
+// Get current user's claim status for a specific item
+// -----------------------------------------------------------------
+export async function getClaimStatus(itemId) {
+  try {
+    const res = await fetch(`${API_URL}/api/claims/status/${itemId}`, {
+      headers: authHeaders(),
+    });
+    const data = await res.json();
+    return data.claim || null;
+  } catch (e) {
+    console.error('getClaimStatus error:', e);
+    return null;
+  }
+}
+
+// -----------------------------------------------------------------
+// Get all claims for an item (owner only)
+// -----------------------------------------------------------------
+export async function getClaimsForItem(itemId) {
+  try {
+    const res = await fetch(`${API_URL}/api/claims/for-item/${itemId}`, {
+      headers: authHeaders(),
+    });
+    const data = await res.json();
+    return data.claims || [];
+  } catch (e) {
+    console.error('getClaimsForItem error:', e);
+    return [];
+  }
+}
+
+// -----------------------------------------------------------------
+// Approve a claim
+// -----------------------------------------------------------------
+export async function approveClaim(claimId) {
+  try {
+    const res = await fetch(`${API_URL}/api/claims/approve`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ claimId }),
+    });
+
+    const data = await res.json();
+
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to approve claim');
+    }
+
+    return data;
+  } catch (e) {
+    console.error('approveClaim error:', e);
+    throw new Error(e.message || 'Failed to approve claim');
+  }
+}
+
+// -----------------------------------------------------------------
+// Reject a claim
+// -----------------------------------------------------------------
+export async function rejectClaim(claimId) {
+  try {
+    const res = await fetch(`${API_URL}/api/claims/reject`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ claimId }),
+    });
+
+    const data = await res.json();
+
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to reject claim');
+    }
+
+    return data;
+  } catch (e) {
+    console.error('rejectClaim error:', e);
+    throw new Error(e.message || 'Failed to reject claim');
+  }
+}
