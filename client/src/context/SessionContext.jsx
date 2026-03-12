@@ -7,27 +7,24 @@ const SESSION_KEY = 'faithguard_session'
 const PING_INTERVAL_MS = 5 * 60 * 1000 // ping every 5 minutes
 
 export function SessionProvider({ children }) {
-  const [session, setSession] = useState(null)
-  const pingTimerRef = useRef(null)
-
-  // -------------------------------------------------------------------------
-  // Load persisted session on mount
-  // -------------------------------------------------------------------------
-  useEffect(() => {
-    const stored = localStorage.getItem(SESSION_KEY)
-    if (!stored) return
-
+  // Load session synchronously from localStorage so it's available on first render.
+  // This prevents ProtectedRoute from redirecting to /checkin on page refresh.
+  const [session, setSession] = useState(() => {
     try {
+      const stored = localStorage.getItem(SESSION_KEY)
+      if (!stored) return null
       const parsed = JSON.parse(stored)
       if (parsed.expiresAt && new Date(parsed.expiresAt) > new Date()) {
-        setSession(parsed)
-      } else {
-        localStorage.removeItem(SESSION_KEY)
+        return parsed
       }
+      localStorage.removeItem(SESSION_KEY)
+      return null
     } catch {
       localStorage.removeItem(SESSION_KEY)
+      return null
     }
-  }, [])
+  })
+  const pingTimerRef = useRef(null)
 
   // -------------------------------------------------------------------------
   // Expiry watchdog — checks every second, clears session when time runs out

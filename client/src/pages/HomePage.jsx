@@ -250,36 +250,6 @@ export default function HomePage() {
             </motion.div>
           </motion.div>
 
-          {/* Secondary Action Area */}
-          <motion.div
-            variants={itemVariants}
-            className="mb-10"
-          >
-            {/* Found an Item Card */}
-            <motion.div
-              whileHover={{ y: -4 }}
-              transition={{ duration: 0.2 }}
-            >
-              <Card
-                onClick={() => navigate('/feed')}
-                className="cursor-pointer"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center flex-shrink-0">
-                    <Package className="w-7 h-7 text-green-600" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-[#1E293B] mb-1">
-                      Found an Item?
-                    </h3>
-                    <p className="text-sm text-[#475569]">
-                      Help someone recover their belongings
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            </motion.div>
-          </motion.div>
 
           {/* Status / Trust Strip */}
           <motion.div

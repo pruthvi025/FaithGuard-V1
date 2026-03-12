@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Search, Clock, CheckCircle2, X, XCircle, Package, ArrowLeft, Filter, Heart } from 'lucide-react'
+import { Plus, Search, Clock, CheckCircle2, X, XCircle, Package, ArrowLeft, Filter, Heart, RefreshCw } from 'lucide-react'
 import { useSession } from '../context/SessionContext'
 import { getItemsForTemple } from '../services/itemService'
 import Layout from '../components/Layout'
@@ -54,42 +54,43 @@ function formatTimeAgo(dateString) {
 
 export default function LostItemsFeed() {
   const navigate = useNavigate()
-  const { getTempleCode, isSessionValid } = useSession()
+  const { getTempleCode } = useSession()
   const [items, setItems] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
   const [filteredItems, setFilteredItems] = useState([])
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [locationFilter, setLocationFilter] = useState('all')
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
 
-  // Load items on mount and when temple code changes
+  // Reusable fetch function
+  const loadItems = async (showSpinner = false) => {
+    if (showSpinner) setRefreshing(true)
+    const templeCode = getTempleCode()
+    if (templeCode) {
+      const templeItems = await getItemsForTemple(templeCode)
+      const sorted = templeItems.sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      )
+      setItems(sorted)
+      setFilteredItems(sorted)
+    }
+    setLoading(false)
+    setRefreshing(false)
+  }
+
+  // Manual refresh handler
+  const handleRefresh = () => {
+    if (refreshing) return // prevent duplicate calls
+    loadItems(true)
+  }
+
+  // Load items on mount + auto-refresh every 5 seconds
   useEffect(() => {
-    if (!isSessionValid()) {
-      navigate('/checkin', { replace: true })
-      return
-    }
-
-    const loadItems = async () => {
-      const templeCode = getTempleCode()
-      if (templeCode) {
-        const templeItems = await getItemsForTemple(templeCode)
-        // Sort by newest first
-        const sorted = templeItems.sort(
-          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-        )
-        setItems(sorted)
-        setFilteredItems(sorted)
-      }
-      setLoading(false)
-    }
-
     loadItems()
-
-    // Refresh items every 5 seconds for real-time updates
-    const interval = setInterval(loadItems, 5000)
-
+    const interval = setInterval(() => loadItems(), 5000)
     return () => clearInterval(interval)
-  }, [getTempleCode, isSessionValid, navigate])
+  }, [getTempleCode])
 
   // Handle search + filters
   useEffect(() => {
@@ -144,15 +145,27 @@ export default function LostItemsFeed() {
                   Help reconnect items with their owners
                 </p>
               </div>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  onClick={() => navigate('/report')}
-                  className="flex items-center gap-2 shadow-lg"
+              <div className="flex items-center gap-3">
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  className="w-10 h-10 rounded-xl bg-white border-2 border-gray-200 flex items-center justify-center text-[#475569] hover:border-[#F59E0B] hover:text-[#F59E0B] transition-colors shadow-sm disabled:opacity-50"
+                  title="Refresh items"
                 >
-                  <Plus className="w-5 h-5" />
-                  Report Item
-                </Button>
-              </motion.div>
+                  <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+                </motion.button>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button
+                    onClick={() => navigate('/report')}
+                    className="flex items-center gap-2 shadow-lg"
+                  >
+                    <Plus className="w-5 h-5" />
+                    Report Item
+                  </Button>
+                </motion.div>
+              </div>
             </div>
           </motion.div>
 
