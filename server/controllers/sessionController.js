@@ -32,7 +32,14 @@ const checkin = async (req, res) => {
 
   try {
     // --- Validate temple exists in Firestore ---
-    const templeDoc = await db.collection("temples").doc(normalizedTempleId).get();
+    // Try lowercase first, then uppercase for backward compatibility
+    let templeDoc = await db.collection("temples").doc(normalizedTempleId).get();
+
+    if (!templeDoc.exists) {
+      // Fallback: try uppercase version (legacy temple IDs)
+      const uppercaseId = normalizedTempleId.toUpperCase();
+      templeDoc = await db.collection("temples").doc(uppercaseId).get();
+    }
 
     if (!templeDoc.exists) {
       console.log(`❌ Invalid temple code: ${normalizedTempleId}`);
