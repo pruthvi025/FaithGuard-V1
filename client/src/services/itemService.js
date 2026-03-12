@@ -482,14 +482,25 @@ export async function getFoundItemById(id) {
 }
 
 // -----------------------------------------------------------------
-// Submit a claim for a found item (owner claims)
+// Submit a claim for a found item (owner claims) — with verification photo
 // -----------------------------------------------------------------
-export async function submitFoundClaim(foundItemId, message) {
+export async function submitFoundClaim(foundItemId, message, verificationPhotoFile) {
   try {
+    const formData = new FormData();
+    formData.append('foundItemId', foundItemId);
+    formData.append('message', message || '');
+    if (verificationPhotoFile) {
+      formData.append('image', verificationPhotoFile);
+    }
+
+    const token = getSessionToken();
+    const headers = {};
+    if (token) headers['session-id'] = token;
+
     const res = await fetch(`${API_URL}/api/found-claims/create`, {
       method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ foundItemId, message: message || '' }),
+      headers,
+      body: formData,
     });
     const data = await res.json();
     if (!data.success) throw new Error(data.error || 'Failed to submit claim');

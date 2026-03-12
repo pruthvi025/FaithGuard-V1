@@ -14,13 +14,30 @@ const { notifyFoundClaimReceived, notifyFoundClaimDecision } = require("../servi
 // -----------------------------------------------------------------
 // POST /api/found-claims/create (protected)
 // Owner submits a claim for a found item
+// Accepts verification photo as: multer file (req.file) OR base64 string in body
 // -----------------------------------------------------------------
 const createFoundClaim = async (req, res) => {
   const { foundItemId, message } = req.body;
   const session = req.session;
 
+  // Get verification photo: prefer multer file, fall back to base64 in body
+  let verificationPhoto = null;
+  if (req.file) {
+    const mimeType = req.file.mimetype || "image/jpeg";
+    const base64 = req.file.buffer.toString("base64");
+    verificationPhoto = `data:${mimeType};base64,${base64}`;
+    console.log(`📷 Found claim: received image via multer: ${req.file.originalname} (${(req.file.size / 1024).toFixed(1)}KB)`);
+  } else if (req.body.verificationPhoto) {
+    verificationPhoto = req.body.verificationPhoto;
+    console.log(`📷 Found claim: received image via base64 body (${(verificationPhoto.length / 1024).toFixed(1)}KB string)`);
+  }
+
   if (!foundItemId) {
     return res.status(400).json({ success: false, error: "foundItemId is required" });
+  }
+
+  if (!verificationPhoto) {
+    return res.status(400).json({ success: false, error: "Verification photo is required to prove ownership" });
   }
 
   try {
@@ -60,6 +77,7 @@ const createFoundClaim = async (req, res) => {
       foundItemId,
       ownerSessionId: session.sessionId,
       finderSessionId: itemData.finderSessionId,
+      verificationPhoto,
       message: (message || "").trim(),
       status: "pending",
       createdAt: now,
@@ -67,7 +85,7 @@ const createFoundClaim = async (req, res) => {
 
     await db.collection("found_claims").doc(claimId).set(claimData);
 
-    console.log(`✅ Found claim created: ${claimId} for found item ${foundItemId}`);
+    console.log(`✅ Found claim created: ${claimId} for found item ${foundItemId} (with verification photo)`);
 
     // Send push notification to the finder
     notifyFoundClaimReceived({ id: foundItemId, ...itemData }, itemData.finderSessionId);

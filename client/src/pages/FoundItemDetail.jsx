@@ -17,6 +17,8 @@ import {
   Locate,
   Navigation2,
   X,
+  Camera,
+  ImagePlus,
 } from 'lucide-react'
 import { useSession } from '../context/SessionContext'
 import {
@@ -100,6 +102,8 @@ export default function FoundItemDetail() {
   const [itemClaims, setItemClaims] = useState([])
   const [showClaimForm, setShowClaimForm] = useState(false)
   const [claimMessage, setClaimMessage] = useState('')
+  const [claimPhoto, setClaimPhoto] = useState(null)
+  const [claimPhotoPreview, setClaimPhotoPreview] = useState(null)
   const [isSubmittingClaim, setIsSubmittingClaim] = useState(false)
 
   // Location sharing state
@@ -204,15 +208,35 @@ export default function FoundItemDetail() {
     }
   }
 
+  // Handle photo selection
+  const handlePhotoSelect = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Photo must be under 10MB')
+      return
+    }
+    setClaimPhoto(file)
+    const reader = new FileReader()
+    reader.onload = (ev) => setClaimPhotoPreview(ev.target.result)
+    reader.readAsDataURL(file)
+  }
+
   // Submit claim
   const handleSubmitClaim = async () => {
     if (isSubmittingClaim) return
+    if (!claimPhoto) {
+      alert('Please upload a verification photo to prove ownership.')
+      return
+    }
     setIsSubmittingClaim(true)
     try {
-      const claim = await submitFoundClaim(item.id || item.foundId, claimMessage)
+      const claim = await submitFoundClaim(item.id || item.foundId, claimMessage, claimPhoto)
       setMyClaim(claim)
       setShowClaimForm(false)
       setClaimMessage('')
+      setClaimPhoto(null)
+      setClaimPhotoPreview(null)
     } catch (error) {
       alert('Failed to submit claim: ' + error.message)
     } finally {
@@ -265,7 +289,8 @@ export default function FoundItemDetail() {
   }
 
   // Can the current user see the location?
-  const canSeeLocation = isFinder || (myClaim?.status === 'approved' && item?.locationShared)
+  // Location visible to: finder always, owner after claim approval
+  const canSeeLocation = isFinder || myClaim?.status === 'approved'
 
   if (isLoading) {
     return (
@@ -427,7 +452,7 @@ export default function FoundItemDetail() {
                           >
                             <div className="flex items-center justify-between">
                               <h3 className="text-sm font-semibold text-blue-800">Claim This Item</h3>
-                              <button onClick={() => { setShowClaimForm(false); setClaimMessage('') }} className="text-gray-400 hover:text-gray-600">
+                              <button onClick={() => { setShowClaimForm(false); setClaimMessage(''); setClaimPhoto(null); setClaimPhotoPreview(null) }} className="text-gray-400 hover:text-gray-600">
                                 <X className="w-4 h-4" />
                               </button>
                             </div>
@@ -443,12 +468,61 @@ export default function FoundItemDetail() {
                                 rows={4}
                               />
                             </div>
+
+                            {/* Photo Upload */}
+                            <div>
+                              <label className="block text-xs font-medium text-blue-700 mb-1">
+                                Upload verification photo *
+                              </label>
+                              <p className="text-[11px] text-blue-600 mb-2">
+                                Take a photo of the item, receipt, box, or any proof of ownership.
+                              </p>
+
+                              {!claimPhotoPreview ? (
+                                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-blue-300 rounded-xl cursor-pointer bg-blue-50/50 hover:bg-blue-100/50 transition-colors">
+                                  <div className="flex flex-col items-center gap-2">
+                                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                      <Camera className="w-5 h-5 text-blue-600" />
+                                    </div>
+                                    <span className="text-xs font-medium text-blue-600">
+                                      Tap to take photo or choose from gallery
+                                    </span>
+                                  </div>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    capture="environment"
+                                    onChange={handlePhotoSelect}
+                                    className="hidden"
+                                  />
+                                </label>
+                              ) : (
+                                <div className="relative">
+                                  <img
+                                    src={claimPhotoPreview}
+                                    alt="Verification photo preview"
+                                    className="w-full h-40 object-cover rounded-xl border border-blue-200"
+                                  />
+                                  <button
+                                    onClick={() => { setClaimPhoto(null); setClaimPhotoPreview(null) }}
+                                    className="absolute top-2 right-2 w-7 h-7 bg-white/90 backdrop-blur rounded-full flex items-center justify-center shadow-md hover:bg-red-50 transition-colors"
+                                  >
+                                    <X className="w-4 h-4 text-red-600" />
+                                  </button>
+                                  <div className="absolute bottom-2 left-2 px-2 py-1 bg-green-600/90 backdrop-blur rounded-full text-[10px] text-white font-medium flex items-center gap-1">
+                                    <CheckCircle2 className="w-3 h-3" />
+                                    Photo selected
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
                             <Button
                               onClick={handleSubmitClaim}
-                              disabled={!claimMessage.trim() || isSubmittingClaim}
+                              disabled={!claimMessage.trim() || !claimPhoto || isSubmittingClaim}
                               className="w-full"
                             >
-                              {isSubmittingClaim ? 'Submitting...' : 'Submit Claim'}
+                              {isSubmittingClaim ? 'Submitting...' : 'Submit Claim with Photo'}
                             </Button>
                           </motion.div>
                         )}
@@ -501,7 +575,20 @@ export default function FoundItemDetail() {
                         {itemClaims.filter(c => c.status === 'pending').map((claim) => (
                           <div key={claim.claimId} className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
                             {claim.message && (
-                              <p className="text-sm text-gray-700 italic">"{claim.message}"</p>
+                              <div>
+                                <p className="text-xs font-semibold text-amber-800 mb-1">Ownership Description:</p>
+                                <p className="text-sm text-gray-700 italic">"{claim.message}"</p>
+                              </div>
+                            )}
+                            {claim.verificationPhoto && (
+                              <div>
+                                <p className="text-xs font-semibold text-amber-800 mb-1">Verification Photo:</p>
+                                <img
+                                  src={claim.verificationPhoto}
+                                  alt="Verification photo from claimant"
+                                  className="w-full h-40 object-cover rounded-xl border border-amber-200"
+                                />
+                              </div>
                             )}
                             <p className="text-xs text-gray-500">
                               Submitted {formatTimeAgo(claim.createdAt)}
