@@ -10,6 +10,7 @@ import CheckInPage from './pages/CheckInPage'
 import HomePage from './pages/HomePage'
 import LostItemsFeed from './pages/LostItemsFeed'
 import ReportLostItem from './pages/ReportLostItem'
+import ReportFoundItem from './pages/ReportFoundItem'
 import ItemDetail from './pages/ItemDetail'
 import CaseClosed from './pages/CaseClosed'
 import AdminDashboard from './pages/AdminDashboard'
@@ -53,6 +54,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ReportLostItem />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/report-found"
+              element={
+                <ProtectedRoute>
+                  <ReportFoundItem />
                 </ProtectedRoute>
               }
             />

@@ -360,6 +360,35 @@ export default function LostItemsFeed() {
             </motion.div>
           )}
         </div>
+
+        {/* Found Item CTA — shown when items exist */}
+        {filteredItems.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="mt-8 mb-4"
+          >
+            <Card className="text-center bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
+              <div className="py-4">
+                <p className="text-[#475569] font-medium mb-3">
+                  Didn't find the item listed?
+                </p>
+                <Button
+                  onClick={() => navigate('/report-found')}
+                  variant="secondary"
+                  className="border-[#F59E0B] text-[#D97706] hover:bg-[#F59E0B]/10"
+                >
+                  <Plus className="w-4 h-4 mr-2 inline" />
+                  Report Found Item
+                </Button>
+                <p className="text-xs text-gray-400 mt-3">
+                  Found something but no one reported it yet? Report it here.
+                </p>
+              </div>
+            </Card>
+          </motion.div>
+        )}
       </div>
       <BottomNav />
     </Layout>

@@ -390,3 +390,79 @@ export async function rejectClaim(claimId) {
     throw new Error(e.message || 'Failed to reject claim');
   }
 }
+
+// =================================================================
+// Found Items API
+// =================================================================
+
+// -----------------------------------------------------------------
+// Submit a found item report (uses FormData for mobile support)
+// -----------------------------------------------------------------
+export async function submitFoundItem(title, description, category, locationFound, timeFound, imageFile, message) {
+  try {
+    const formData = new FormData();
+    formData.append('title', title);
+    formData.append('description', description);
+    formData.append('category', category || 'other');
+    formData.append('locationFound', locationFound);
+    formData.append('timeFound', timeFound || new Date().toISOString());
+    formData.append('message', message || '');
+    if (imageFile) {
+      formData.append('image', imageFile);
+    }
+
+    const token = getSessionToken();
+    const headers = {};
+    if (token) headers['session-id'] = token;
+
+    const res = await fetch(`${API_URL}/api/found-items/create`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Failed to submit found item');
+    return data.foundItem;
+  } catch (e) {
+    console.error('submitFoundItem error:', e);
+    throw new Error(e.message || 'Failed to submit found item');
+  }
+}
+
+// -----------------------------------------------------------------
+// Get found items for a temple
+// -----------------------------------------------------------------
+export async function getFoundItems(templeId) {
+  try {
+    const res = await fetch(`${API_URL}/api/found-items?templeId=${encodeURIComponent(templeId)}`, {
+      headers: authHeaders(),
+    });
+
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Failed to fetch found items');
+    return data.items;
+  } catch (e) {
+    console.error('getFoundItems error:', e);
+    return [];
+  }
+}
+
+// -----------------------------------------------------------------
+// Find matching found items for a lost item
+// -----------------------------------------------------------------
+export async function findMatchesForLostItem(templeId, title, category, description) {
+  try {
+    const params = new URLSearchParams({ templeId, title: title || '', category: category || '', description: description || '' });
+    const res = await fetch(`${API_URL}/api/found-items/match?${params}`, {
+      headers: authHeaders(),
+    });
+
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Failed to find matches');
+    return data.matches;
+  } catch (e) {
+    console.error('findMatchesForLostItem error:', e);
+    return [];
+  }
+}
