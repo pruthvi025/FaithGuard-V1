@@ -130,6 +130,17 @@ const createItem = async (req, res) => {
     const itemId = uuidv4();
     const now = new Date().toISOString();
 
+    // Look up the owner's current FCM token for persistent notifications
+    let ownerNotificationToken = null;
+    try {
+      const tokenDoc = await db.collection("fcm_tokens").doc(session.sessionId).get();
+      if (tokenDoc.exists && tokenDoc.data().token) {
+        ownerNotificationToken = tokenDoc.data().token;
+      }
+    } catch (tokenErr) {
+      console.warn("⚠ Could not fetch owner FCM token:", tokenErr.message);
+    }
+
     const newItem = {
       title: title.trim(),
       description: description.trim(),
@@ -141,6 +152,7 @@ const createItem = async (req, res) => {
       status: "active",
       templeId: session.templeId,
       reporterSessionId: session.sessionId,
+      ownerNotificationToken,
       createdAt: now,
       updatedAt: now,
       foundBySessionId: null,
@@ -149,7 +161,7 @@ const createItem = async (req, res) => {
 
     await db.collection("items").doc(itemId).set(newItem);
 
-    console.log(`✅ Item created: ${itemId} — "${title.trim()}"`);
+    console.log(`✅ Item created: ${itemId} — "${title.trim()}" (owner token: ${ownerNotificationToken ? 'stored' : 'none'})`);
 
     const createdItem = { id: itemId, ...newItem };
 

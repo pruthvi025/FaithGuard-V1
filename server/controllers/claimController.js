@@ -9,7 +9,7 @@
 
 const { db } = require("../config/firebase");
 const { v4: uuidv4 } = require("uuid");
-const { notifyClaimReceived, notifyClaimDecision } = require("../services/pushNotificationService");
+const { notifyClaimReceivedPriority, notifyClaimDecision } = require("../services/pushNotificationService");
 
 // -----------------------------------------------------------------
 // POST /api/claims/create (protected)
@@ -88,8 +88,8 @@ const createClaim = async (req, res) => {
 
     console.log(`✅ Claim created: ${claimId} for item ${itemId}`);
 
-    // Send push notification to the owner
-    notifyClaimReceived({ id: itemId, ...itemData }, itemData.reporterSessionId);
+    // Send push notification to the owner (priority: works even after session expires)
+    notifyClaimReceivedPriority({ id: itemId, ...itemData }, itemData.reporterSessionId);
 
     res.status(201).json({ success: true, claim: claimData });
   } catch (error) {

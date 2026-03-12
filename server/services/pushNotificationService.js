@@ -325,6 +325,68 @@ function notifyClaimDecision(item, finderSessionId, approved) {
   );
 }
 
+// -----------------------------------------------------------------
+// Send notification DIRECTLY using a stored FCM token (bypasses session expiry)
+// Used for owner priority notifications when session may have expired
+// -----------------------------------------------------------------
+async function notifyOwnerDirect(fcmToken, notification, data = {}) {
+  if (!fcmToken) {
+    console.log("📭 No owner FCM token provided — skipping direct notification");
+    return { sent: 0, failed: 0 };
+  }
+
+  try {
+    const message = {
+      notification: {
+        title: notification.title,
+        body: notification.body,
+      },
+      data: Object.fromEntries(
+        Object.entries(data).map(([k, v]) => [k, String(v)])
+      ),
+      token: fcmToken,
+    };
+
+    await admin.messaging().send(message);
+    console.log("🔔 Owner direct notification sent successfully");
+    return { sent: 1, failed: 0 };
+  } catch (error) {
+    console.warn("⚠ Owner direct notification failed:", error.code || error.message);
+    return { sent: 0, failed: 1 };
+  }
+}
+
+// -----------------------------------------------------------------
+// Convenience: notify item owner about a new claim (with priority)
+// Tries session-based first; falls back to stored token on item
+// Avoids duplicates by checking if session notification succeeded
+// -----------------------------------------------------------------
+async function notifyClaimReceivedPriority(item, ownerSessionId) {
+  const notification = {
+    title: "📋 Someone claims they found your item",
+    body: `A claim has been submitted for "${item.title || 'your lost item'}"`,
+  };
+
+  const data = {
+    type: "claim-received",
+    itemId: item.id || "",
+    templeId: item.templeId || "",
+  };
+
+  // Try session-based notification first (works if session still active)
+  const sessionResult = await notifySession(ownerSessionId, notification, data).catch(
+    (err) => { console.error("Push notification error:", err.message); return { sent: 0, failed: 0 }; }
+  );
+
+  // If session notification failed (expired session), use stored token
+  if (sessionResult.sent === 0 && item.ownerNotificationToken) {
+    console.log("📡 Session notification failed — using owner's stored token for priority delivery");
+    notifyOwnerDirect(item.ownerNotificationToken, notification, data).catch(
+      (err) => console.error("Owner direct notification error:", err.message)
+    );
+  }
+}
+
 module.exports = {
   notifyTemple,
   notifyNewLostItem,
@@ -333,5 +395,7 @@ module.exports = {
   notifyNewMessage,
   notifyClaimReceived,
   notifyClaimDecision,
+  notifyOwnerDirect,
+  notifyClaimReceivedPriority,
 };
 
