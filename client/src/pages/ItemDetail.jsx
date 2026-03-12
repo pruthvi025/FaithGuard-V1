@@ -164,9 +164,25 @@ export default function ItemDetail() {
       if (currentIsReporter) {
         // Reporter: load conversation list + claims
         const convos = await getConversationsForItem(id)
-        setConversations(convos)
         const claims = await getClaimsForItem(id)
         setItemClaims(claims)
+
+        // Merge approved finders into conversations so owner can initiate chat
+        const approvedFinders = claims
+          .filter(c => c.status === 'approved')
+          .map(c => c.finderSessionId)
+        const existingPeers = new Set(convos.map(c => c.peerSessionId))
+        const virtualConvos = approvedFinders
+          .filter(sid => !existingPeers.has(sid))
+          .map(sid => ({
+            conversationId: `virtual-${sid}`,
+            peerSessionId: sid,
+            lastMessage: 'Claim approved — start chatting!',
+            lastMessageAt: new Date().toISOString(),
+            messageCount: 0,
+          }))
+
+        setConversations([...convos, ...virtualConvos])
 
         if (selectedPeer) {
           const convoMessages = await getMessagesForConversation(id, selectedPeer)
@@ -895,13 +911,16 @@ export default function ItemDetail() {
               animate={{ opacity: 1, x: 0 }}
               className="flex flex-col"
             >
-              {/* Gate chat: non-reporters need an approved claim */}
-              {(!isReporter && myClaim?.status !== 'approved') ? (
+              {/* Gate chat: both sides need an approved claim */}
+              {((!isReporter && myClaim?.status !== 'approved') ||
+                (isReporter && item.status === 'active' && itemClaims.filter(c => c.status === 'approved').length === 0)) ? (
                 <Card className="flex-1 flex flex-col min-h-[500px] items-center justify-center text-center">
                   <Lock className="w-12 h-12 text-gray-300 mb-4" />
                   <h2 className="text-lg font-semibold text-[#1E293B] mb-2">Chat Locked</h2>
                   <p className="text-sm text-[#475569] max-w-xs">
-                    Submit a claim and get it approved by the owner to start chatting.
+                    {isReporter
+                      ? 'Chat will unlock once you approve a claim.'
+                      : 'Submit a claim and get it approved by the owner to start chatting.'}
                   </p>
                 </Card>
               ) : (
