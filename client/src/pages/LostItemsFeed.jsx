@@ -60,6 +60,7 @@ export default function LostItemsFeed() {
   const [filteredItems, setFilteredItems] = useState([])
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [locationFilter, setLocationFilter] = useState('all')
+  const [loading, setLoading] = useState(true)
 
   // Load items on mount and when temple code changes
   useEffect(() => {
@@ -79,6 +80,7 @@ export default function LostItemsFeed() {
         setItems(sorted)
         setFilteredItems(sorted)
       }
+      setLoading(false)
     }
 
     loadItems()
@@ -222,7 +224,20 @@ export default function LostItemsFeed() {
           </motion.div>
 
           {/* Items List */}
-          {filteredItems.length > 0 ? (
+          {loading ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-center py-20"
+            >
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                className="w-12 h-12 mx-auto mb-4 border-4 border-gray-200 border-t-[#F59E0B] rounded-full"
+              />
+              <p className="text-[#475569] text-lg">Loading items...</p>
+            </motion.div>
+          ) : filteredItems.length > 0 ? (
             <div className="space-y-4">
               {filteredItems.map((item, index) => {
                 const status = statusConfig[item.status] || statusConfig.active
