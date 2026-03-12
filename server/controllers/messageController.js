@@ -10,6 +10,7 @@
 
 const { db } = require("../config/firebase");
 const { v4: uuidv4 } = require("uuid");
+const { notifyNewMessage } = require("../services/pushNotificationService");
 
 /**
  * Generate a deterministic conversationId from itemId + two session IDs.
@@ -222,6 +223,10 @@ const addMessage = async (req, res) => {
     await convRef.collection("messages").doc(messageId).set(newMessage);
 
     console.log(`✅ Message added to conversation ${conversationId}`);
+
+    // 3. Send targeted push notification ONLY to the receiver
+    const itemData = { id: itemId, ...itemDoc.data() };
+    notifyNewMessage(itemData, conversationId, receiverSessionId);
 
     res.status(201).json({
       success: true,

@@ -27,7 +27,6 @@ import {
 import {
   notifyItemFound,
   notifyCaseStatusChange,
-  notifyNewMessage,
 } from '../services/notificationTriggers'
 import { useNotificationCenter } from '../context/NotificationCenterContext'
 import {
@@ -203,10 +202,8 @@ export default function ItemDetail() {
     try {
       const newMessage = await addMessageToItem(item.id, message, receiverSid)
 
-      // Trigger notification for new message
-      notifyNewMessage(item, newMessage, item.templeCode)
-      
-      // Add to notification center
+      // Add to local notification center (for in-app UI feedback only)
+      // Backend now handles the actual FCM push notification to the receiver
       notifyNewMessageToCenter(addNotification, item, newMessage, item.templeCode)
 
       // Reload messages

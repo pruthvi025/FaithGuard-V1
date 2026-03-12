@@ -200,4 +200,87 @@ async function removeInvalidToken(token) {
   }
 }
 
-module.exports = { notifyTemple, notifyNewLostItem, notifyItemFound };
+// -----------------------------------------------------------------
+// Send push notification to a SPECIFIC session (targeted delivery)
+// -----------------------------------------------------------------
+async function notifySession(sessionId, notification, data = {}) {
+  try {
+    // Fetch the FCM token for this specific session
+    const tokenDoc = await db.collection("fcm_tokens").doc(sessionId).get();
+
+    if (!tokenDoc.exists) {
+      console.log(`📭 No FCM token for session ${sessionId} — skipping notification`);
+      return { sent: 0, failed: 0 };
+    }
+
+    const tokenData = tokenDoc.data();
+
+    // Skip expired or inactive tokens
+    if (!tokenData.isActive || (tokenData.expiresAt && new Date(tokenData.expiresAt) <= new Date())) {
+      console.log(`📭 Token expired/inactive for session ${sessionId}`);
+      return { sent: 0, failed: 0 };
+    }
+
+    if (!tokenData.token) {
+      console.log(`📭 No valid token string for session ${sessionId}`);
+      return { sent: 0, failed: 0 };
+    }
+
+    // Send to this specific token
+    const message = {
+      notification: {
+        title: notification.title,
+        body: notification.body,
+      },
+      data: Object.fromEntries(
+        Object.entries(data).map(([k, v]) => [k, String(v)])
+      ),
+      token: tokenData.token,
+    };
+
+    try {
+      await admin.messaging().send(message);
+      console.log(`🔔 Notification sent to session ${sessionId}`);
+      return { sent: 1, failed: 0 };
+    } catch (sendError) {
+      console.warn(`⚠ Notification to session ${sessionId} failed:`, sendError.code || sendError.message);
+
+      // Remove invalid tokens
+      if (
+        sendError.code === "messaging/invalid-registration-token" ||
+        sendError.code === "messaging/registration-token-not-registered"
+      ) {
+        removeInvalidToken(tokenData.token);
+      }
+
+      return { sent: 0, failed: 1 };
+    }
+  } catch (error) {
+    console.error("❌ notifySession error:", error.message);
+    return { sent: 0, failed: 0 };
+  }
+}
+
+// -----------------------------------------------------------------
+// Convenience: notify about a new message (targeted to receiver only)
+// -----------------------------------------------------------------
+function notifyNewMessage(item, conversationId, receiverSessionId) {
+  const notification = {
+    title: "💬 New Message",
+    body: `You have received a new message about "${item.title || 'your lost item'}"`,
+  };
+
+  const data = {
+    type: "message",
+    itemId: item.id || "",
+    conversationId: conversationId || "",
+    templeId: item.templeId || "",
+  };
+
+  // Fire-and-forget — send ONLY to the receiver
+  notifySession(receiverSessionId, notification, data).catch(
+    (err) => console.error("Push notification error:", err.message)
+  );
+}
+
+module.exports = { notifyTemple, notifyNewLostItem, notifyItemFound, notifySession, notifyNewMessage };
