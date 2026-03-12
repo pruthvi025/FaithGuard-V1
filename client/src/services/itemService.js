@@ -152,28 +152,48 @@ export async function updateItem(itemId, updates) {
 }
 
 // -----------------------------------------------------------------
-// Get messages for an item
+// Get messages for a specific 1:1 conversation
 // -----------------------------------------------------------------
-export async function getMessagesForItem(itemId) {
+export async function getMessagesForConversation(itemId, peerSessionId) {
   try {
-    const res = await fetch(`${API_URL}/api/messages/${itemId}`);
+    const res = await fetch(
+      `${API_URL}/api/messages/${itemId}/${encodeURIComponent(peerSessionId)}`,
+      { headers: authHeaders() }
+    );
     const data = await res.json();
     return data.messages || [];
   } catch (e) {
-    console.error('getMessagesForItem error:', e);
+    console.error('getMessagesForConversation error:', e);
     return [];
   }
 }
 
 // -----------------------------------------------------------------
-// Add message to item
+// Get all conversation threads for an item (current user's conversations)
 // -----------------------------------------------------------------
-export async function addMessageToItem(itemId, text, senderSessionId, senderType = 'other') {
+export async function getConversationsForItem(itemId) {
+  try {
+    const res = await fetch(
+      `${API_URL}/api/messages/${itemId}/conversations`,
+      { headers: authHeaders() }
+    );
+    const data = await res.json();
+    return data.conversations || [];
+  } catch (e) {
+    console.error('getConversationsForItem error:', e);
+    return [];
+  }
+}
+
+// -----------------------------------------------------------------
+// Add message to a 1:1 conversation
+// -----------------------------------------------------------------
+export async function addMessageToItem(itemId, text, receiverSessionId) {
   try {
     const res = await fetch(`${API_URL}/api/messages/${itemId}`, {
       method: 'POST',
       headers: authHeaders(),
-      body: JSON.stringify({ text, senderType }),
+      body: JSON.stringify({ text, receiverSessionId }),
     });
 
     const data = await res.json();

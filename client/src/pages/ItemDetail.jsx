@@ -20,7 +20,8 @@ import {
   getItemById,
   updateItemStatus,
   updateItem,
-  getMessagesForItem,
+  getMessagesForConversation,
+  getConversationsForItem,
   addMessageToItem,
 } from '../services/itemService'
 import {
@@ -90,6 +91,8 @@ export default function ItemDetail() {
   const [item, setItem] = useState(null)
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState([])
+  const [conversations, setConversations] = useState([])
+  const [selectedPeer, setSelectedPeer] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isMarkingFound, setIsMarkingFound] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
@@ -105,7 +108,18 @@ export default function ItemDetail() {
 
   const isReporter = item && session && item.reporterSessionId === session.sessionToken
 
-  // Load item and messages
+  // Determine peerSessionId based on role
+  const getPeerSessionId = (itemData) => {
+    if (!itemData || !session) return null
+    // Non-reporter always chats with the reporter
+    if (itemData.reporterSessionId !== session.sessionToken) {
+      return itemData.reporterSessionId
+    }
+    // Reporter uses the selected peer from conversation list
+    return selectedPeer
+  }
+
+  // Load item and messages/conversations
   useEffect(() => {
     if (!isSessionValid()) {
       navigate('/checkin', { replace: true })
@@ -120,8 +134,28 @@ export default function ItemDetail() {
       }
 
       setItem(itemData)
-      const itemMessages = await getMessagesForItem(id)
-      setMessages(itemMessages)
+
+      const currentIsReporter = itemData.reporterSessionId === session?.sessionToken
+
+      if (currentIsReporter) {
+        // Reporter: load conversation list
+        const convos = await getConversationsForItem(id)
+        setConversations(convos)
+
+        // If a peer is selected, load that conversation
+        if (selectedPeer) {
+          const convoMessages = await getMessagesForConversation(id, selectedPeer)
+          setMessages(convoMessages)
+        }
+      } else {
+        // Non-reporter: always chat with the reporter
+        const peerSid = itemData.reporterSessionId
+        if (peerSid) {
+          const convoMessages = await getMessagesForConversation(id, peerSid)
+          setMessages(convoMessages)
+        }
+      }
+
       setIsLoading(false)
     }
 
@@ -131,7 +165,7 @@ export default function ItemDetail() {
     const interval = setInterval(loadData, 3000)
 
     return () => clearInterval(interval)
-  }, [id, isSessionValid, navigate])
+  }, [id, isSessionValid, navigate, selectedPeer, session?.sessionToken])
 
   // Stop location sharing if status changes away from found or on unmount
   useEffect(() => {
@@ -149,9 +183,12 @@ export default function ItemDetail() {
   const handleSend = async () => {
     if (!message.trim() || !session || !item) return
 
+    // Determine the receiver
+    const receiverSid = isReporter ? selectedPeer : item.reporterSessionId
+    if (!receiverSid) return
+
     try {
-      const senderType = isReporter ? 'reporter' : 'other'
-      const newMessage = await addMessageToItem(item.id, message, session.sessionToken, senderType)
+      const newMessage = await addMessageToItem(item.id, message, receiverSid)
 
       // Trigger notification for new message
       notifyNewMessage(item, newMessage, item.templeCode)
@@ -160,7 +197,7 @@ export default function ItemDetail() {
       notifyNewMessageToCenter(addNotification, item, newMessage, item.templeCode)
 
       // Reload messages
-      const updatedMessages = await getMessagesForItem(item.id)
+      const updatedMessages = await getMessagesForConversation(item.id, receiverSid)
       setMessages(updatedMessages)
       setMessage('')
     } catch (error) {
@@ -579,86 +616,152 @@ export default function ItemDetail() {
                   Messages
                 </h2>
 
-                {/* Messages */}
-                <div className="flex-1 space-y-4 mb-6 overflow-y-auto pr-2 max-h-[400px]">
-                  {messages.length === 0 ? (
-                    <div className="text-center py-12 text-gray-400">
-                      <p className="text-sm">No messages yet.</p>
-                      <p className="text-xs mt-2">
-                        {isReporter
-                          ? 'Wait for someone to contact you about this item.'
-                          : 'Start a conversation to verify ownership.'}
-                      </p>
-                    </div>
-                  ) : (
-                    <AnimatePresence>
-                      {messages.map((msg, index) => {
-                        const isMyMessage = msg.senderSessionId === session?.sessionToken
-                        return (
-                          <motion.div
-                            key={msg.id}
-                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            transition={{ delay: index === messages.length - 1 ? 0.1 : 0 }}
-                            className={`flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}
+                {/* Reporter: Conversation List View */}
+                {isReporter && !selectedPeer && (
+                  <div className="flex-1 overflow-y-auto pr-2 max-h-[400px]">
+                    {conversations.length === 0 ? (
+                      <div className="text-center py-12 text-gray-400">
+                        <p className="text-sm">No conversations yet.</p>
+                        <p className="text-xs mt-2">
+                          Wait for someone to contact you about this item.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="text-xs text-gray-500 mb-3">
+                          {conversations.length} conversation{conversations.length !== 1 ? 's' : ''}
+                        </p>
+                        {conversations.map((conv) => (
+                          <motion.button
+                            key={conv.conversationId}
+                            whileHover={{ scale: 1.01 }}
+                            whileTap={{ scale: 0.99 }}
+                            onClick={() => {
+                              setSelectedPeer(conv.peerSessionId)
+                              setMessages([])
+                            }}
+                            className="w-full text-left p-4 rounded-xl border border-gray-200 hover:border-[#F59E0B] hover:bg-orange-50 transition-all"
                           >
-                            <motion.div
-                              whileHover={{ scale: 1.02 }}
-                              className={`max-w-[80%] rounded-2xl px-4 py-3 shadow-md ${
-                                isMyMessage
-                                  ? 'bg-gradient-to-r from-[#FDBA74] to-[#F59E0B] text-white'
-                                  : 'bg-gray-100 text-[#1E293B]'
-                              }`}
-                            >
-                              <p className="text-sm md:text-base leading-relaxed">{msg.text}</p>
-                              <p
-                                className={`text-xs mt-2 ${
-                                  isMyMessage ? 'text-white/70' : 'text-gray-500'
-                                }`}
-                              >
-                                {formatTimeAgo(msg.createdAt)}
-                              </p>
-                            </motion.div>
-                          </motion.div>
-                        )
-                      })}
-                    </AnimatePresence>
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>
-
-                {/* Input */}
-                {item.status !== 'closed' && (
-                  <div className="flex gap-2 pt-4 border-t border-gray-200">
-                    <Input
-                      placeholder={
-                        isReporter
-                          ? 'Reply to messages...'
-                          : 'Describe the item to verify ownership...'
-                      }
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                      className="flex-1"
-                    />
-                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                      <Button
-                        onClick={handleSend}
-                        disabled={!message.trim()}
-                        className="px-4"
-                      >
-                        <Send className="w-5 h-5" />
-                      </Button>
-                    </motion.div>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-semibold text-[#1E293B]">
+                                User ...{conv.peerSessionId.slice(-6)}
+                              </span>
+                              <span className="text-xs text-gray-400">
+                                {formatTimeAgo(conv.lastMessageAt)}
+                              </span>
+                            </div>
+                            <p className="text-xs text-[#475569] truncate">
+                              {conv.lastMessage}
+                            </p>
+                            <span className="text-xs text-gray-400 mt-1 block">
+                              {conv.messageCount} message{conv.messageCount !== 1 ? 's' : ''}
+                            </span>
+                          </motion.button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {item.status === 'closed' && (
-                  <div className="pt-4 border-t border-gray-200">
-                    <p className="text-sm text-gray-400 text-center">
-                      This case is closed. Messaging is no longer available.
-                    </p>
-                  </div>
+                {/* Chat Thread View (for non-reporter, or reporter with selected peer) */}
+                {(!isReporter || selectedPeer) && (
+                  <>
+                    {/* Back button for reporter */}
+                    {isReporter && selectedPeer && (
+                      <button
+                        onClick={() => {
+                          setSelectedPeer(null)
+                          setMessages([])
+                        }}
+                        className="flex items-center gap-1 text-sm text-[#475569] hover:text-[#1E293B] mb-3 transition-colors"
+                      >
+                        <ArrowLeft className="w-4 h-4" />
+                        Back to conversations
+                      </button>
+                    )}
+
+                    {/* Messages */}
+                    <div className="flex-1 space-y-4 mb-6 overflow-y-auto pr-2 max-h-[400px]">
+                      {messages.length === 0 ? (
+                        <div className="text-center py-12 text-gray-400">
+                          <p className="text-sm">No messages yet.</p>
+                          <p className="text-xs mt-2">
+                            {isReporter
+                              ? 'No messages in this conversation yet.'
+                              : 'Start a conversation to verify ownership.'}
+                          </p>
+                        </div>
+                      ) : (
+                        <AnimatePresence>
+                          {messages.map((msg, index) => {
+                            const isMyMessage = msg.senderSessionId === session?.sessionToken
+                            return (
+                              <motion.div
+                                key={msg.id}
+                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                transition={{ delay: index === messages.length - 1 ? 0.1 : 0 }}
+                                className={`flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}
+                              >
+                                <motion.div
+                                  whileHover={{ scale: 1.02 }}
+                                  className={`max-w-[80%] rounded-2xl px-4 py-3 shadow-md ${
+                                    isMyMessage
+                                      ? 'bg-gradient-to-r from-[#FDBA74] to-[#F59E0B] text-white'
+                                      : 'bg-gray-100 text-[#1E293B]'
+                                  }`}
+                                >
+                                  <p className="text-sm md:text-base leading-relaxed">{msg.text}</p>
+                                  <p
+                                    className={`text-xs mt-2 ${
+                                      isMyMessage ? 'text-white/70' : 'text-gray-500'
+                                    }`}
+                                  >
+                                    {formatTimeAgo(msg.createdAt)}
+                                  </p>
+                                </motion.div>
+                              </motion.div>
+                            )
+                          })}
+                        </AnimatePresence>
+                      )}
+                      <div ref={messagesEndRef} />
+                    </div>
+
+                    {/* Input */}
+                    {item.status !== 'closed' && (
+                      <div className="flex gap-2 pt-4 border-t border-gray-200">
+                        <Input
+                          placeholder={
+                            isReporter
+                              ? 'Reply to this user...'
+                              : 'Describe the item to verify ownership...'
+                          }
+                          value={message}
+                          onChange={(e) => setMessage(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                          className="flex-1"
+                        />
+                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                          <Button
+                            onClick={handleSend}
+                            disabled={!message.trim()}
+                            className="px-4"
+                          >
+                            <Send className="w-5 h-5" />
+                          </Button>
+                        </motion.div>
+                      </div>
+                    )}
+
+                    {item.status === 'closed' && (
+                      <div className="pt-4 border-t border-gray-200">
+                        <p className="text-sm text-gray-400 text-center">
+                          This case is closed. Messaging is no longer available.
+                        </p>
+                      </div>
+                    )}
+                  </>
                 )}
               </Card>
             </motion.div>
