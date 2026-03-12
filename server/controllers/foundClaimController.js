@@ -36,10 +36,6 @@ const createFoundClaim = async (req, res) => {
     return res.status(400).json({ success: false, error: "foundItemId is required" });
   }
 
-  if (!verificationPhoto) {
-    return res.status(400).json({ success: false, error: "Verification photo is required to prove ownership" });
-  }
-
   try {
     // Verify the found item exists
     const itemDoc = await db.collection("found_items").doc(foundItemId).get();

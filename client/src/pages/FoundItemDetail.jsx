@@ -225,10 +225,6 @@ export default function FoundItemDetail() {
   // Submit claim
   const handleSubmitClaim = async () => {
     if (isSubmittingClaim) return
-    if (!claimPhoto) {
-      alert('Please upload a verification photo to prove ownership.')
-      return
-    }
     setIsSubmittingClaim(true)
     try {
       const claim = await submitFoundClaim(item.id || item.foundId, claimMessage, claimPhoto)
@@ -469,33 +465,39 @@ export default function FoundItemDetail() {
                               />
                             </div>
 
-                            {/* Photo Upload */}
+                            {/* Photo Upload (optional) */}
                             <div>
                               <label className="block text-xs font-medium text-blue-700 mb-1">
-                                Upload verification photo *
+                                Upload verification photo (optional)
                               </label>
                               <p className="text-[11px] text-blue-600 mb-2">
-                                Take a photo of the item, receipt, box, or any proof of ownership.
+                                Add a photo of the item, receipt, or proof of ownership to strengthen your claim.
                               </p>
 
                               {!claimPhotoPreview ? (
-                                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-blue-300 rounded-xl cursor-pointer bg-blue-50/50 hover:bg-blue-100/50 transition-colors">
-                                  <div className="flex flex-col items-center gap-2">
-                                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                      <Camera className="w-5 h-5 text-blue-600" />
-                                    </div>
-                                    <span className="text-xs font-medium text-blue-600">
-                                      Tap to take photo or choose from gallery
-                                    </span>
-                                  </div>
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    capture="environment"
-                                    onChange={handlePhotoSelect}
-                                    className="hidden"
-                                  />
-                                </label>
+                                <div className="flex gap-2">
+                                  <label className="flex-1 flex flex-col items-center justify-center h-24 border-2 border-dashed border-blue-300 rounded-xl cursor-pointer bg-blue-50/50 hover:bg-blue-100/50 transition-colors">
+                                    <Camera className="w-5 h-5 text-blue-600 mb-1" />
+                                    <span className="text-[11px] font-medium text-blue-600">Take Photo</span>
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      capture="environment"
+                                      onChange={handlePhotoSelect}
+                                      className="hidden"
+                                    />
+                                  </label>
+                                  <label className="flex-1 flex flex-col items-center justify-center h-24 border-2 border-dashed border-blue-300 rounded-xl cursor-pointer bg-blue-50/50 hover:bg-blue-100/50 transition-colors">
+                                    <ImagePlus className="w-5 h-5 text-blue-600 mb-1" />
+                                    <span className="text-[11px] font-medium text-blue-600">Upload from Gallery</span>
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      onChange={handlePhotoSelect}
+                                      className="hidden"
+                                    />
+                                  </label>
+                                </div>
                               ) : (
                                 <div className="relative">
                                   <img
@@ -519,10 +521,10 @@ export default function FoundItemDetail() {
 
                             <Button
                               onClick={handleSubmitClaim}
-                              disabled={!claimMessage.trim() || !claimPhoto || isSubmittingClaim}
+                              disabled={!claimMessage.trim() || isSubmittingClaim}
                               className="w-full"
                             >
-                              {isSubmittingClaim ? 'Submitting...' : 'Submit Claim with Photo'}
+                              {isSubmittingClaim ? 'Submitting...' : 'Submit Claim'}
                             </Button>
                           </motion.div>
                         )}
