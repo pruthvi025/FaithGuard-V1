@@ -278,14 +278,24 @@ export async function checkForDuplicates(title, description, templeCode) {
 }
 
 // -----------------------------------------------------------------
-// Submit a claim for a lost item
+// Submit a claim for a lost item (uses FormData for mobile support)
 // -----------------------------------------------------------------
-export async function submitClaim(itemId, foundItemImage, message) {
+export async function submitClaim(itemId, imageFile, message) {
   try {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    formData.append('itemId', itemId);
+    formData.append('message', message || '');
+
+    const token = getSessionToken();
+    const headers = {};
+    if (token) headers['session-id'] = token;
+    // Do NOT set Content-Type — browser sets multipart boundary automatically
+
     const res = await fetch(`${API_URL}/api/claims/create`, {
       method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ itemId, foundItemImage, message }),
+      headers,
+      body: formData,
     });
 
     const data = await res.json();

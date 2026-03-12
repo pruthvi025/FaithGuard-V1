@@ -14,10 +14,24 @@ const { notifyClaimReceived, notifyClaimDecision } = require("../services/pushNo
 // -----------------------------------------------------------------
 // POST /api/claims/create (protected)
 // Submit a claim for a lost item
+// Accepts image as: multer file (req.file) OR base64 string in body
 // -----------------------------------------------------------------
 const createClaim = async (req, res) => {
-  const { itemId, foundItemImage, message } = req.body;
+  const { itemId, message } = req.body;
   const session = req.session;
+
+  // Get image: prefer multer file, fall back to base64 in body
+  let foundItemImage = null;
+  if (req.file) {
+    // Convert multer buffer to base64 data URI
+    const mimeType = req.file.mimetype || "image/jpeg";
+    const base64 = req.file.buffer.toString("base64");
+    foundItemImage = `data:${mimeType};base64,${base64}`;
+    console.log(`📷 Received image via multer: ${req.file.originalname} (${(req.file.size / 1024).toFixed(1)}KB)`);
+  } else if (req.body.foundItemImage) {
+    foundItemImage = req.body.foundItemImage;
+    console.log(`📷 Received image via base64 body (${(foundItemImage.length / 1024).toFixed(1)}KB string)`);
+  }
 
   if (!itemId) {
     return res.status(400).json({ success: false, error: "itemId is required" });
@@ -79,8 +93,8 @@ const createClaim = async (req, res) => {
 
     res.status(201).json({ success: true, claim: claimData });
   } catch (error) {
-    console.error("❌ Create claim error:", error);
-    res.status(500).json({ success: false, error: "Failed to create claim" });
+    console.error("❌ Create claim error:", error.message, error.stack);
+    res.status(500).json({ success: false, error: "Failed to create claim", details: error.message });
   }
 };
 

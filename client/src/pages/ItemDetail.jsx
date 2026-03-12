@@ -299,24 +299,61 @@ export default function ItemDetail() {
   // ---------------------------------------------------------------
   // Claim handlers
   // ---------------------------------------------------------------
-  const handleClaimImageChange = (e) => {
+
+  // Compress image using canvas (max 800px, JPEG 0.7 quality)
+  const compressImage = (file) => {
+    return new Promise((resolve) => {
+      const img = new Image()
+      const url = URL.createObjectURL(file)
+      img.onload = () => {
+        URL.revokeObjectURL(url)
+        const MAX = 800
+        let w = img.width, h = img.height
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX }
+          else { w = Math.round(w * MAX / h); h = MAX }
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = w
+        canvas.height = h
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0, w, h)
+        canvas.toBlob(
+          (blob) => resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' })),
+          'image/jpeg',
+          0.7
+        )
+      }
+      img.onerror = () => resolve(file) // fallback to original
+      img.src = url
+    })
+  }
+
+  const [claimImageFile, setClaimImageFile] = useState(null) // raw File for upload
+
+  const handleClaimImageChange = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    const reader = new FileReader()
-    reader.onloadend = () => setClaimImage(reader.result)
-    reader.readAsDataURL(file)
+    // Show preview immediately
+    setClaimImage(URL.createObjectURL(file))
+
+    // Compress in background
+    const compressed = await compressImage(file)
+    setClaimImageFile(compressed)
+    console.log(`📷 Compressed: ${(file.size/1024).toFixed(0)}KB → ${(compressed.size/1024).toFixed(0)}KB`)
   }
 
   const handleSubmitClaim = async () => {
-    if (!claimImage || isSubmittingClaim) return
+    if (!claimImageFile || isSubmittingClaim) return
 
     setIsSubmittingClaim(true)
     try {
-      const claim = await submitClaim(item.id, claimImage, claimMessage)
+      const claim = await submitClaim(item.id, claimImageFile, claimMessage)
       setMyClaim(claim)
       setShowClaimForm(false)
       setClaimImage(null)
+      setClaimImageFile(null)
       setClaimMessage('')
     } catch (error) {
       alert('Failed to submit claim: ' + error.message)
