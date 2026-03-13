@@ -7,7 +7,7 @@
 const { v4: uuidv4 } = require("uuid");
 const { db } = require("../config/firebase");
 
-const SESSION_DURATION_MS = 4 * 60 * 60 * 1000; // 4 hours
+const SESSION_DURATION_MS = 10 * 60 * 1000; // 10 minutes
 
 /**
  * POST /api/session/checkin
