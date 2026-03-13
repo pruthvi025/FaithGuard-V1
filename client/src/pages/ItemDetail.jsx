@@ -544,9 +544,9 @@ export default function ItemDetail() {
                           src={item.image}
                           alt={item.title}
                           className="w-full h-full object-cover"
-                          style={item.imageApproved ? {} : { filter: 'blur(20px)', transform: 'scale(1.1)' }}
+                          style={(item.imageApproved || canSeeLocation) ? {} : { filter: 'blur(20px)', transform: 'scale(1.1)' }}
                         />
-                        {!item.imageApproved && (
+                        {!(item.imageApproved || canSeeLocation) && (
                           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 rounded-2xl">
                             <Eye className="w-8 h-8 text-white drop-shadow-lg mb-1" />
                             <span className="text-sm font-semibold text-white drop-shadow-lg">Photo Under Review</span>
