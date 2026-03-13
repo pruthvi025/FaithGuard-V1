@@ -15,7 +15,7 @@ const { notifyTemple } = require("../services/pushNotificationService");
 // Submit a found item report (JSON body, no image)
 // -----------------------------------------------------------------
 const createFoundItem = async (req, res) => {
-  const { title, category, locationFound, timeFound } = req.body;
+  const { title, category, locationFound, timeFound, image } = req.body;
   const session = req.session;
 
   if (!title || !locationFound) {
@@ -35,6 +35,8 @@ const createFoundItem = async (req, res) => {
       category: category || "other",
       locationFound: locationFound.trim(),
       timeFound: timeFound || now,
+      image: image || null,
+      imageApproved: false,
       finderSessionId: session.sessionId,
       templeId: session.templeId,
       status: "found", // found | matched | closed

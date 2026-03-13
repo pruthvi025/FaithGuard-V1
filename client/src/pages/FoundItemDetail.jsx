@@ -334,9 +334,27 @@ export default function FoundItemDetail() {
             >
               <Card>
                 <div className="space-y-6">
-                  {/* Icon */}
-                  <div className="w-full h-48 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center shadow-lg">
-                    <span className="text-7xl">{categoryEmoji[item.category] || '📦'}</span>
+                  {/* Image or Icon */}
+                  <div className="w-full h-48 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center shadow-lg overflow-hidden relative">
+                    {item.image ? (
+                      <>
+                        <img
+                          src={item.image}
+                          alt={item.title}
+                          className="w-full h-full object-cover"
+                          style={item.imageApproved ? {} : { filter: 'blur(20px)', transform: 'scale(1.1)' }}
+                        />
+                        {!item.imageApproved && (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 rounded-2xl">
+                            <Eye className="w-8 h-8 text-white drop-shadow-lg mb-1" />
+                            <span className="text-sm font-semibold text-white drop-shadow-lg">Photo Under Review</span>
+                            <span className="text-xs text-white/80 drop-shadow mt-1">Blurred for privacy until admin approval</span>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-7xl">{categoryEmoji[item.category] || '📦'}</span>
+                    )}
                   </div>
 
                   <div>

@@ -21,6 +21,7 @@ const {
   getAllConversations,
   deleteConversationPermanently,
   getAuditLogs,
+  approveItemPhoto,
 } = require("../controllers/adminController");
 const {
   logAdminAction,
@@ -42,6 +43,7 @@ router.get("/dashboard/audit-logs", getAuditLogs);
 // Dashboard — mutations (force-close, verify)
 router.patch("/dashboard/items/:id/force-close", forceCloseItem);
 router.patch("/dashboard/items/:id/verify", verifyItem);
+router.patch("/dashboard/items/:id/approve-photo", approveItemPhoto);
 
 // Dashboard — permanent deletes
 router.delete("/dashboard/items/:id", deleteItem);

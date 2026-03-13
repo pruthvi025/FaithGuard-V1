@@ -536,14 +536,24 @@ export default function ItemDetail() {
                 <div className="space-y-6">
                   <motion.div
                     whileHover={{ scale: 1.02 }}
-                    className="w-full h-80 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden shadow-lg"
+                    className="w-full h-80 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden shadow-lg relative"
                   >
                     {item.image ? (
-                      <img
-                        src={item.image}
-                        alt={item.title}
-                        className="w-full h-full object-cover"
-                      />
+                      <>
+                        <img
+                          src={item.image}
+                          alt={item.title}
+                          className="w-full h-full object-cover"
+                          style={item.imageApproved ? {} : { filter: 'blur(20px)', transform: 'scale(1.1)' }}
+                        />
+                        {!item.imageApproved && (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 rounded-2xl">
+                            <Eye className="w-8 h-8 text-white drop-shadow-lg mb-1" />
+                            <span className="text-sm font-semibold text-white drop-shadow-lg">Photo Under Review</span>
+                            <span className="text-xs text-white/80 drop-shadow mt-1">Blurred for privacy until admin approval</span>
+                          </div>
+                        )}
+                      </>
                     ) : (
                       <Package className="w-24 h-24 text-gray-400" />
                     )}

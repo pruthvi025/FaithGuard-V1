@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   LogOut, Shield, CheckCircle2, AlertTriangle, Check, XCircle,
   HelpCircle, Loader2, RefreshCw, Trash2, MessageSquare, FileText,
-  ClipboardList, Package, Search as SearchIcon, X
+  ClipboardList, Package, Search as SearchIcon, X, Eye, Image as ImageIcon
 } from 'lucide-react'
 import Layout from '../components/Layout'
 import Card from '../components/Card'
@@ -428,6 +428,33 @@ export default function AdminDashboard() {
   const disputedCases = allItems.filter((c) => c.disputed && c.status !== 'CLOSED')
 
   // ---------------------------------------------------------------------------
+  // Approve Photo
+  // ---------------------------------------------------------------------------
+  const handleApprovePhoto = async (item) => {
+    const itemType = item.itemType === 'found' ? 'found' : 'lost'
+    try {
+      const res = await fetch(`${API_URL}/api/admin/dashboard/items/${item.id}/approve-photo?type=${itemType}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      const data = await res.json()
+      if (data.success) {
+        if (itemType === 'found') {
+          setFoundItems((prev) => prev.map((c) => c.id === item.id ? { ...c, imageApproved: true } : c))
+        } else {
+          setLostItems((prev) => prev.map((c) => c.id === item.id ? { ...c, imageApproved: true } : c))
+        }
+        fetchAuditLogs()
+      } else {
+        alert('Failed to approve photo: ' + (data.error || 'Unknown error'))
+      }
+    } catch (err) {
+      console.error('Approve photo error:', err)
+      alert('Failed to approve photo')
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Stats
   // ---------------------------------------------------------------------------
   const totalItems = lostItems.length + foundItems.length
@@ -645,6 +672,16 @@ export default function AdminDashboard() {
                               <td className="px-4 py-3 md:px-5 text-[#6B7280]">{formatTimeAgo(c.createdAt)}</td>
                               <td className="px-4 py-3 md:px-5 text-right">
                                 <div className="flex justify-end gap-2">
+                                  {c.image && !c.imageApproved && (
+                                    <Button
+                                      variant="secondary" size="sm"
+                                      className="text-[11px] px-3 py-1 text-green-700 bg-green-50 border-green-300 hover:bg-green-100"
+                                      onClick={() => handleApprovePhoto(c)}
+                                    >
+                                      <Eye className="w-3 h-3 mr-1 inline" />
+                                      Approve Photo
+                                    </Button>
+                                  )}
                                   {c.disputed && c.status !== 'CLOSED' && (
                                     <Button variant="secondary" size="sm" className="text-[11px] px-3 py-1" onClick={() => setSelectedCase(c)}>
                                       Review

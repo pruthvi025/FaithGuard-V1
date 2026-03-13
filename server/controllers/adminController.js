@@ -233,6 +233,7 @@ const getDashboardItems = async (req, res) => {
         location: data.location || "Unknown",
         status: (data.status || "active").toUpperCase(),
         image: data.image || null,
+        imageApproved: data.imageApproved || false,
         templeId: data.templeId || "",
         reporterSessionId: data.reporterSessionId || null,
         foundBySessionId: data.foundBySessionId || null,
@@ -282,6 +283,7 @@ const getDashboardFoundItems = async (req, res) => {
         location: data.locationFound || data.location || "Unknown",
         status: (data.status || "active").toUpperCase(),
         image: data.image || null,
+        imageApproved: data.imageApproved || false,
         templeId: data.templeId || "",
         finderSessionId: data.finderSessionId || null,
         ownerSessionId: data.ownerSessionId || null,
@@ -657,6 +659,48 @@ const getAuditLogs = async (req, res) => {
     res.status(500).json({ success: false, error: "Failed to fetch audit logs" });
   }
 };
+// -----------------------------------------------------------------
+// PATCH /api/admin/dashboard/items/:id/approve-photo
+// Approve a photo for a lost or found item
+// Accepts query param ?type=lost|found (defaults to lost)
+// -----------------------------------------------------------------
+const approveItemPhoto = async (req, res) => {
+  const { id } = req.params;
+  const itemType = req.query.type || "lost";
+  const adminUserId = req.adminUser ? req.adminUser.uid : "unknown";
+
+  const collection = itemType === "found" ? "found_items" : "items";
+
+  try {
+    const docRef = db.collection(collection).doc(id);
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
+      return res.status(404).json({ success: false, error: "Item not found" });
+    }
+
+    await docRef.update({
+      imageApproved: true,
+      updatedAt: new Date().toISOString(),
+    });
+
+    // Audit log
+    await logAuditAction(
+      adminUserId,
+      "approve_photo",
+      collection,
+      id,
+      `Approved photo for ${itemType} item "${doc.data().title || 'Unknown'}"`
+    );
+
+    console.log(`✅ Photo approved for ${collection}/${id}`);
+
+    res.json({ success: true, message: "Photo approved" });
+  } catch (error) {
+    console.error("❌ Approve photo error:", error);
+    res.status(500).json({ success: false, error: "Failed to approve photo" });
+  }
+};
 
 module.exports = {
   adminLogin,
@@ -672,4 +716,5 @@ module.exports = {
   getAllConversations,
   deleteConversationPermanently,
   getAuditLogs,
+  approveItemPhoto,
 };

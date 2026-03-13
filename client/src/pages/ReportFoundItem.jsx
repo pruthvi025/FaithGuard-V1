@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Search, AlertCircle, Phone, Briefcase, Gem, WalletCards, KeyRound, MoreHorizontal, MapPin, Clock } from 'lucide-react'
+import { ArrowLeft, Search, AlertCircle, Phone, Briefcase, Gem, WalletCards, KeyRound, MoreHorizontal, MapPin, Clock, Upload, X } from 'lucide-react'
 import { useSession } from '../context/SessionContext'
 import { submitFoundItem } from '../services/itemService'
 import Layout from '../components/Layout'
@@ -18,6 +18,7 @@ export default function ReportFoundItem() {
     title: '',
     locationFound: '',
     timeFound: '',
+    image: null,
   })
   const [errors, setErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -55,6 +56,32 @@ export default function ReportFoundItem() {
     )
   }
 
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        setErrors({ ...errors, image: 'Please upload an image file' })
+        return
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setErrors({ ...errors, image: 'Image must be less than 5MB' })
+        return
+      }
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setFormData({ ...formData, image: reader.result })
+        const newErrors = { ...errors }
+        delete newErrors.image
+        setErrors(newErrors)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleRemoveImage = () => {
+    setFormData({ ...formData, image: null })
+  }
+
   const handleSubmit = async () => {
     if (!validateForm()) return
 
@@ -67,7 +94,8 @@ export default function ReportFoundItem() {
         formData.title.trim(),
         formData.category,
         formData.locationFound.trim(),
-        formData.timeFound || new Date().toISOString()
+        formData.timeFound || new Date().toISOString(),
+        formData.image
       )
 
       setSubmitted(true)
@@ -251,6 +279,61 @@ export default function ReportFoundItem() {
                         value={formData.timeFound}
                         onChange={(e) => setFormData({ ...formData, timeFound: e.target.value })}
                       />
+                    </div>
+
+                    {/* Photo Upload (Optional) */}
+                    <div>
+                      <label className="block text-sm font-semibold text-[#475569] mb-3">
+                        Photo (Optional)
+                      </label>
+                      <motion.div
+                        whileHover={{ scale: 1.02 }}
+                        className="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center hover:border-[#F59E0B]/50 transition-colors cursor-pointer bg-gradient-to-br from-gray-50 to-white"
+                      >
+                        {formData.image ? (
+                          <div className="relative">
+                            <img
+                              src={formData.image}
+                              alt="Preview"
+                              className="max-h-48 mx-auto rounded-xl shadow-lg"
+                            />
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={handleRemoveImage}
+                              className="absolute top-2 right-2 bg-white rounded-full p-2 shadow-lg hover:bg-red-50 transition-colors"
+                            >
+                              <X className="w-4 h-4 text-red-500" />
+                            </motion.button>
+                          </div>
+                        ) : (
+                          <label className="cursor-pointer">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageUpload}
+                              className="hidden"
+                            />
+                            <div>
+                              <motion.div
+                                animate={{ y: [0, -5, 0] }}
+                                transition={{ duration: 2, repeat: Infinity }}
+                              >
+                                <Upload className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                              </motion.div>
+                              <p className="text-sm text-[#475569] font-medium">
+                                Tap to upload a photo
+                              </p>
+                              <p className="text-xs text-gray-400 mt-1">
+                                Helps others identify the item (max 5MB)
+                              </p>
+                            </div>
+                          </label>
+                        )}
+                      </motion.div>
+                      {errors.image && (
+                        <p className="text-xs text-red-600 mt-1">{errors.image}</p>
+                      )}
                     </div>
                   </div>
                 </Card>

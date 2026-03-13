@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Search, Clock, CheckCircle2, X, XCircle, Package, ArrowLeft, Filter, Heart, RefreshCw } from 'lucide-react'
+import { Plus, Search, Clock, CheckCircle2, X, XCircle, Package, ArrowLeft, Filter, Heart, RefreshCw, Eye, EyeOff } from 'lucide-react'
 import { useSession } from '../context/SessionContext'
 import { getItemsForTemple } from '../services/itemService'
 import Layout from '../components/Layout'
@@ -259,14 +259,23 @@ export default function LostItemsFeed() {
                       <div className="flex items-start gap-4">
                         <motion.div
                           whileHover={{ scale: 1.05, rotate: 5 }}
-                          className="w-24 h-24 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden"
+                          className="w-24 h-24 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden relative"
                         >
                           {item.image ? (
-                            <img
-                              src={item.image}
-                              alt={item.title}
-                              className="w-full h-full object-cover rounded-2xl"
-                            />
+                            <>
+                              <img
+                                src={item.image}
+                                alt={item.title}
+                                className="w-full h-full object-cover rounded-2xl"
+                                style={item.imageApproved ? {} : { filter: 'blur(20px)', transform: 'scale(1.1)' }}
+                              />
+                              {!item.imageApproved && (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/20 rounded-2xl">
+                                  <EyeOff className="w-5 h-5 text-white drop-shadow-md" />
+                                  <span className="text-[9px] font-semibold text-white drop-shadow-md mt-0.5">Under Review</span>
+                                </div>
+                              )}
+                            </>
                           ) : (
                             <Package className="w-10 h-10 text-gray-400" />
                           )}

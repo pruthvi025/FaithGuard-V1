@@ -146,6 +146,7 @@ const createItem = async (req, res) => {
       description: description.trim(),
       location: location.trim(),
       image: image || null,
+      imageApproved: false,
       category: category || "other",
       rewardAmount: rewardAmount ? parseFloat(rewardAmount) : null,
       rewardGiven: false,

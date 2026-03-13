@@ -398,7 +398,7 @@ export async function rejectClaim(claimId) {
 // -----------------------------------------------------------------
 // Submit a found item report (simple JSON)
 // -----------------------------------------------------------------
-export async function submitFoundItem(title, category, locationFound, timeFound) {
+export async function submitFoundItem(title, category, locationFound, timeFound, image) {
   try {
     const res = await fetch(`${API_URL}/api/found-items/create`, {
       method: 'POST',
@@ -411,6 +411,7 @@ export async function submitFoundItem(title, category, locationFound, timeFound)
         category: category || 'other',
         locationFound,
         timeFound: timeFound || new Date().toISOString(),
+        image: image || null,
       }),
     });
 
