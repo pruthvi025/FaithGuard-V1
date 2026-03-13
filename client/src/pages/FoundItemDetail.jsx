@@ -342,9 +342,9 @@ export default function FoundItemDetail() {
                           src={item.image}
                           alt={item.title}
                           className="w-full h-full object-cover"
-                          style={(item.imageApproved || canSeeLocation) ? {} : { filter: 'blur(20px)', transform: 'scale(1.1)' }}
+                          style={(isFinder || item.imageApproved || myClaim?.status === 'approved') ? {} : { filter: 'blur(20px)', transform: 'scale(1.1)' }}
                         />
-                        {!(item.imageApproved || canSeeLocation) && (
+                        {!(isFinder || item.imageApproved || myClaim?.status === 'approved') && (
                           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 rounded-2xl">
                             <Eye className="w-8 h-8 text-white drop-shadow-lg mb-1" />
                             <span className="text-sm font-semibold text-white drop-shadow-lg">Photo Under Review</span>
