@@ -67,6 +67,27 @@ const categoryEmoji = {
   phone: '📱', bag: '👜', jewelry: '💍', wallet: '👛', keys: '🔑', other: '📦',
 }
 
+// Compress image to max 800px / JPEG 0.75 before uploading
+function compressImage(file, maxDim = 800, quality = 0.75) {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onload = () => {
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height))
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.round(img.width * scale)
+        canvas.height = Math.round(img.height * scale)
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+        canvas.toBlob((blob) => resolve(blob || file), 'image/jpeg', quality)
+      }
+      img.src = e.target.result
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
+
 function formatTimeAgo(dateString) {
   const date = new Date(dateString)
   const now = new Date()
@@ -208,18 +229,21 @@ export default function FoundItemDetail() {
     }
   }
 
-  // Handle photo selection
-  const handlePhotoSelect = (e) => {
+  // Handle photo selection — compress before storing
+  const handlePhotoSelect = async (e) => {
     const file = e.target.files[0]
     if (!file) return
-    if (file.size > 10 * 1024 * 1024) {
-      alert('Photo must be under 10MB')
+    if (file.size > 20 * 1024 * 1024) {
+      alert('Photo must be under 20MB')
       return
     }
-    setClaimPhoto(file)
+    // Show preview immediately from original
     const reader = new FileReader()
     reader.onload = (ev) => setClaimPhotoPreview(ev.target.result)
     reader.readAsDataURL(file)
+    // Compress in background and store the compressed blob
+    const compressed = await compressImage(file)
+    setClaimPhoto(new File([compressed], file.name, { type: 'image/jpeg' }))
   }
 
   // Submit claim

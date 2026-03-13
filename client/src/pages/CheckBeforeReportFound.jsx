@@ -37,7 +37,7 @@ const categoryEmoji = {
 
 export default function CheckBeforeReportFound() {
   const navigate = useNavigate()
-  const { getTempleCode } = useSession()
+  const { getTempleCode, session } = useSession()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -166,6 +166,13 @@ export default function CheckBeforeReportFound() {
                     onClick={() => navigate(`/item/${item.id}`)}
                     className="hover:shadow-lg transition-all duration-200 cursor-pointer"
                   >
+                    {item.reporterSessionId === session?.sessionToken && (
+                      <div className="flex justify-end mb-2">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-600 border border-indigo-200">
+                          ✦ Posted by me
+                        </span>
+                      </div>
+                    )}
                     <div className="flex items-start gap-4">
                       <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-50 to-amber-100 flex items-center justify-center flex-shrink-0 text-2xl shadow-sm">
                         {item.image ? (
