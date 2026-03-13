@@ -370,6 +370,11 @@ export default function FoundItemDetail() {
                         {status.label}
                       </motion.span>
                     </div>
+                    {isFinder && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-600 border border-indigo-200 mb-3">
+                        ✦ Posted by me
+                      </span>
+                    )}
 
                     <div className="space-y-3 text-sm">
                       <div className="flex items-center gap-3 text-[#475569]">

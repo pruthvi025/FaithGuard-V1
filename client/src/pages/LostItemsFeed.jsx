@@ -54,7 +54,7 @@ function formatTimeAgo(dateString) {
 
 export default function LostItemsFeed() {
   const navigate = useNavigate()
-  const { getTempleCode } = useSession()
+  const { getTempleCode, session } = useSession()
   const [items, setItems] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
   const [filteredItems, setFilteredItems] = useState([])
@@ -256,6 +256,14 @@ export default function LostItemsFeed() {
                       onClick={() => navigate(`/item/${item.id}`)}
                       className="hover:shadow-2xl transition-all duration-300 cursor-pointer"
                     >
+                      {/* Posted by me badge */}
+                      {item.reporterSessionId === session?.sessionToken && (
+                        <div className="flex justify-end mb-2">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-600 border border-indigo-200">
+                            ✦ Posted by me
+                          </span>
+                        </div>
+                      )}
                       <div className="flex items-start gap-4">
                         <motion.div
                           whileHover={{ scale: 1.05, rotate: 5 }}
@@ -267,9 +275,9 @@ export default function LostItemsFeed() {
                                 src={item.image}
                                 alt={item.title}
                                 className="w-full h-full object-cover rounded-2xl"
-                                style={item.imageApproved ? {} : { filter: 'blur(20px)', transform: 'scale(1.1)' }}
+                                style={(item.reporterSessionId === session?.sessionToken || item.imageApproved) ? {} : { filter: 'blur(20px)', transform: 'scale(1.1)' }}
                               />
-                              {!item.imageApproved && (
+                              {!(item.reporterSessionId === session?.sessionToken || item.imageApproved) && (
                                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/20 rounded-2xl">
                                   <EyeOff className="w-5 h-5 text-white drop-shadow-md" />
                                   <span className="text-[9px] font-semibold text-white drop-shadow-md mt-0.5">Under Review</span>

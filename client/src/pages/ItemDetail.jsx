@@ -572,6 +572,11 @@ export default function ItemDetail() {
                         {status.label}
                       </motion.span>
                     </div>
+                    {isReporter && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-600 border border-indigo-200 mb-3">
+                        ✦ Posted by me
+                      </span>
+                    )}
                     <p className="text-[#475569] mb-6 leading-relaxed text-base md:text-lg">
                       {item.description}
                     </p>
