@@ -7,6 +7,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import ProtectedAdminRoute from './components/ProtectedAdminRoute'
 import LandingPage from './pages/LandingPage'
 import CheckInPage from './pages/CheckInPage'
+import TempleEntry from './pages/TempleEntry'
 import HomePage from './pages/HomePage'
 import LostItemsFeed from './pages/LostItemsFeed'
 import ReportLostItem from './pages/ReportLostItem'
@@ -34,6 +35,7 @@ function App() {
               {/* Public Routes */}
               <Route path="/" element={<LandingPage />} />
             <Route path="/checkin" element={<CheckInPage />} />
+            <Route path="/enter" element={<TempleEntry />} />
             
             {/* User Routes (Protected by Session) */}
             <Route
