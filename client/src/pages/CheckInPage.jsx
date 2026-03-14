@@ -352,7 +352,7 @@ export default function CheckInPage() {
             variants={itemVariants}
             className="text-center text-sm text-gray-400 mt-8"
           >
-            No login • No tracking • Temporary access only • Session expires in 10 minutes
+            No login • No tracking • Temporary access only • Session expires in 40 minutes
           </motion.p>
         </motion.div>
       </div>
