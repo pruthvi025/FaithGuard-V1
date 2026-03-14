@@ -79,6 +79,16 @@ async function notifyTemple(templeId, notification, data = {}, excludeSessionId 
         data: Object.fromEntries(
           Object.entries(data).map(([k, v]) => [k, String(v)])
         ),
+        webpush: {
+          notification: {
+            icon: '/vite.svg',
+            badge: '/vite.svg',
+            requireInteraction: false,
+          },
+          fcmOptions: {
+            link: '/',
+          },
+        },
         tokens: batch,
       };
 
@@ -216,26 +226,17 @@ async function notifySession(sessionId, notification, data = {}) {
       return { sent: 0, failed: 0 };
     }
 
-    const now = new Date();
     const tokens = [];
-    const expiredDocs = [];
 
     snapshot.forEach((doc) => {
       const d = doc.data();
-      // Skip expired tokens
-      if (d.expiresAt && new Date(d.expiresAt) <= now) {
-        expiredDocs.push(doc.id);
-        return;
-      }
+      // Don't skip based on session expiry — FCM tokens remain valid
+      // even after FaithGuard sessions expire. This is critical for
+      // owner-priority notifications.
       if (d.token) {
         tokens.push(d.token);
       }
     });
-
-    // Clean up expired tokens in background
-    if (expiredDocs.length > 0) {
-      cleanupExpiredTokens(expiredDocs);
-    }
 
     if (tokens.length === 0) {
       console.log(`📭 No valid tokens for session ${sessionId}`);
@@ -256,6 +257,16 @@ async function notifySession(sessionId, notification, data = {}) {
         data: Object.fromEntries(
           Object.entries(data).map(([k, v]) => [k, String(v)])
         ),
+        webpush: {
+          notification: {
+            icon: '/vite.svg',
+            badge: '/vite.svg',
+            requireInteraction: false,
+          },
+          fcmOptions: {
+            link: '/',
+          },
+        },
         token,
       };
 
@@ -367,6 +378,16 @@ async function notifyOwnerDirect(fcmToken, notification, data = {}) {
       data: Object.fromEntries(
         Object.entries(data).map(([k, v]) => [k, String(v)])
       ),
+      webpush: {
+        notification: {
+          icon: '/vite.svg',
+          badge: '/vite.svg',
+          requireInteraction: false,
+        },
+        fcmOptions: {
+          link: '/',
+        },
+      },
       token: fcmToken,
     };
 

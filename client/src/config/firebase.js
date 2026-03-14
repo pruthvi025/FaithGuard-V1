@@ -46,18 +46,7 @@ if (isFirebaseConfigured) {
     // Initialize Cloud Firestore and get a reference to the service
     db = getFirestore(app)
     
-    // Initialize Cloud Messaging (only in browser, not SSR)
-    if (typeof window !== 'undefined') {
-      isSupported().then((supported) => {
-        if (supported) {
-          try {
-            messaging = getMessaging(app)
-          } catch (error) {
-            console.warn('Firebase Messaging initialization error:', error)
-          }
-        }
-      })
-    }
+    // Messaging is initialized lazily via getMessagingInstance()
   } catch (error) {
     console.warn('Firebase initialization error:', error)
     console.warn('Admin features will not be available until Firebase is configured.')
@@ -69,6 +58,25 @@ if (isFirebaseConfigured) {
   }
 } else {
   console.info('Firebase not configured. Admin features disabled. See ADMIN_SETUP.md for setup instructions.')
+}
+
+/**
+ * Async getter for Firebase Messaging instance.
+ * Ensures messaging is initialized only once, after isSupported() resolves.
+ */
+export async function getMessagingInstance() {
+  if (messaging) return messaging
+  if (typeof window === 'undefined' || !app) return null
+
+  try {
+    const supported = await isSupported()
+    if (supported) {
+      messaging = getMessaging(app)
+    }
+  } catch (error) {
+    console.warn('Firebase Messaging initialization error:', error)
+  }
+  return messaging
 }
 
 export { auth, db, messaging, isFirebaseConfigured }
