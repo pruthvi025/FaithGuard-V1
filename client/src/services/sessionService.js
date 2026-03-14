@@ -8,7 +8,7 @@ const API_URL = import.meta.env.VITE_API_URL || ''
 // Returns { sessionToken, expiresAt }
 export async function checkIn(templeId) {
   // Normalize temple ID — always lowercase, trimmed
-  const normalizedTempleId = templeId.trim().toLowerCase();
+  const normalizedTempleId = (templeId || "").trim().toLowerCase();
 
   const res = await fetch(`${API_URL}/api/session/checkin`, {
     method: 'POST',

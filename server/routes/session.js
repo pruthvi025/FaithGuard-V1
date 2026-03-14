@@ -17,11 +17,11 @@ const SESSION_DURATION_MS = 4 * 60 * 60 * 1000 // 4 hours
 router.post('/checkin', async (req, res) => {
   const { templeId } = req.body
 
-  if (!templeId || typeof templeId !== 'string' || !templeId.trim()) {
+  if (!templeId || typeof templeId !== 'string' || !(templeId || '').trim()) {
     return res.status(400).json({ error: 'templeId is required' })
   }
 
-  const sanitizedTempleId = templeId.trim()
+  const sanitizedTempleId = (templeId || '').trim()
 
   try {
     const sessionToken = crypto.randomBytes(32).toString('hex')

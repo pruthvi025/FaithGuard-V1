@@ -34,19 +34,19 @@ export default function ReportFoundItem() {
   const handleFieldChange = (field, value) => {
     setFormData({ ...formData, [field]: value })
     const newErrors = { ...errors }
-    if (field === 'title' && value.trim().length >= 3) delete newErrors.title
-    if (field === 'locationFound' && value.trim().length > 0) delete newErrors.locationFound
-    if (field === 'phoneNumber' && /^\d{10,15}$/.test(value.trim())) delete newErrors.phoneNumber
+    if (field === 'title' && (value || "").trim().length >= 3) delete newErrors.title
+    if (field === 'locationFound' && (value || "").trim().length > 0) delete newErrors.locationFound
+    if (field === 'phoneNumber' && /^\d{10,15}$/.test((value || "").trim())) delete newErrors.phoneNumber
     delete newErrors.submit
     setErrors(newErrors)
   }
 
   const validateForm = () => {
     const newErrors = {}
-    if (!formData.title || formData.title.trim().length < 3) newErrors.title = 'Title must be at least 3 characters'
-    if (!formData.locationFound || formData.locationFound.trim().length === 0) newErrors.locationFound = 'Location is required'
+    if (!formData.title || (formData.title || "").trim().length < 3) newErrors.title = 'Title must be at least 3 characters'
+    if (!formData.locationFound || (formData.locationFound || "").trim().length === 0) newErrors.locationFound = 'Location is required'
     if (!formData.category) newErrors.category = 'Please select a category'
-    if (!formData.phoneNumber || !/^\d{10,15}$/.test(formData.phoneNumber.trim())) newErrors.phoneNumber = 'Enter a valid phone number (10-15 digits)'
+    if (!formData.phoneNumber || !/^\d{10,15}$/.test((formData.phoneNumber || "").trim())) newErrors.phoneNumber = 'Enter a valid phone number (10-15 digits)'
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -54,9 +54,9 @@ export default function ReportFoundItem() {
   const isFormValid = () => {
     return (
       formData.category &&
-      formData.title.trim().length >= 3 &&
-      formData.locationFound.trim().length > 0 &&
-      /^\d{10,15}$/.test(formData.phoneNumber.trim())
+      (formData.title || "").trim().length >= 3 &&
+      (formData.locationFound || "").trim().length > 0 &&
+      /^\d{10,15}$/.test((formData.phoneNumber || "").trim())
     )
   }
 
@@ -95,12 +95,12 @@ export default function ReportFoundItem() {
       if (!templeCode || !session) throw new Error('Session invalid')
 
       await submitFoundItem(
-        formData.title.trim(),
+        (formData.title || "").trim(),
         formData.category,
-        formData.locationFound.trim(),
+        (formData.locationFound || "").trim(),
         formData.timeFound || new Date().toISOString(),
         formData.image,
-        formData.phoneNumber.trim()
+        (formData.phoneNumber || "").trim()
       )
 
       setSubmitted(true)

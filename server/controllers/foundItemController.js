@@ -31,9 +31,9 @@ const createFoundItem = async (req, res) => {
 
     const foundItemData = {
       foundId,
-      title: title.trim(),
+      title: (title || "").trim(),
       category: category || "other",
-      locationFound: locationFound.trim(),
+      locationFound: (locationFound || "").trim(),
       timeFound: timeFound || now,
       image: image || null,
       imageApproved: false,
@@ -46,14 +46,14 @@ const createFoundItem = async (req, res) => {
 
     await db.collection("found_items").doc(foundId).set(foundItemData);
 
-    console.log(`✅ Found item created: ${foundId} — "${title.trim()}"`);
+    console.log(`✅ Found item created: ${foundId} — "${(title || "").trim()}"`);
 
     // Notify all temple visitors about the found item
     notifyTemple(
       session.templeId,
       {
         title: "🔍 Someone found an item!",
-        body: `A ${category || "item"} was found: "${title.trim()}" at ${locationFound.trim()}`,
+        body: `A ${category || "item"} was found: "${(title || "").trim()}" at ${(locationFound || "").trim()}`,
       },
       {
         type: "found-item",

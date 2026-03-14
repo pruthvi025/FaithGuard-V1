@@ -21,14 +21,14 @@ const SESSION_DURATION_MS = 40 * 60 * 1000; // 40 minutes
 const checkin = async (req, res) => {
   const { templeId } = req.body;
 
-  if (!templeId || typeof templeId !== "string" || !templeId.trim()) {
+  if (!templeId || typeof templeId !== "string" || !(templeId || "").trim()) {
     return res.status(400).json({
       success: false,
       error: "templeId is required",
     });
   }
 
-  const normalizedTempleId = templeId.trim().toLowerCase();
+  const normalizedTempleId = (templeId || "").trim().toLowerCase();
 
   try {
     // --- Validate temple exists in Firestore ---

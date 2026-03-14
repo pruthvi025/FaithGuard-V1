@@ -143,9 +143,9 @@ const createItem = async (req, res) => {
     }
 
     const newItem = {
-      title: title.trim(),
-      description: description.trim(),
-      location: location.trim(),
+      title: (title || "").trim(),
+      description: (description || "").trim(),
+      location: (location || "").trim(),
       image: image || null,
       imageApproved: false,
       category: category || "other",
@@ -164,7 +164,7 @@ const createItem = async (req, res) => {
 
     await db.collection("items").doc(itemId).set(newItem);
 
-    console.log(`✅ Item created: ${itemId} — "${title.trim()}" (owner token: ${ownerNotificationToken ? 'stored' : 'none'})`);
+    console.log(`✅ Item created: ${itemId} — "${(title || "").trim()}" (owner token: ${ownerNotificationToken ? 'stored' : 'none'})`);
 
     const createdItem = { id: itemId, ...newItem };
 

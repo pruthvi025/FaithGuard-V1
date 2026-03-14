@@ -157,7 +157,7 @@ const addMessage = async (req, res) => {
   const { text, receiverSessionId } = req.body;
   const session = req.session; // attached by verifySession middleware
 
-  if (!text || !text.trim()) {
+  if (!text || !(text || "").trim()) {
     return res.status(400).json({
       success: false,
       error: "Message text is required",
@@ -199,7 +199,7 @@ const addMessage = async (req, res) => {
         participantA: sorted[0],
         participantB: sorted[1],
         createdAt: now,
-        lastMessage: text.trim(),
+        lastMessage: (text || "").trim(),
         lastMessageAt: now,
         messageCount: 1,
       });
@@ -208,7 +208,7 @@ const addMessage = async (req, res) => {
     } else {
       // Update conversation metadata
       await convRef.update({
-        lastMessage: text.trim(),
+        lastMessage: (text || "").trim(),
         lastMessageAt: now,
         messageCount: (convDoc.data().messageCount || 0) + 1,
       });
@@ -219,7 +219,7 @@ const addMessage = async (req, res) => {
     const newMessage = {
       senderSessionId,
       receiverSessionId,
-      text: text.trim(),
+      text: (text || "").trim(),
       timestamp: now,
     };
 

@@ -37,7 +37,7 @@ export default function TempleEntry() {
     }
 
     // ── Normalise & auto-check-in ──
-    const normalizedTempleId = templeId.trim().toLowerCase()
+    const normalizedTempleId = (templeId || "").trim().toLowerCase()
 
     let cancelled = false
 

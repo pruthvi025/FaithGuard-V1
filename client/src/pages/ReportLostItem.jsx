@@ -37,21 +37,34 @@ export default function ReportLostItem() {
 
   // Load saved form data on mount
   useEffect(() => {
-    const savedData = localStorage.getItem(FORM_STORAGE_KEY)
-    if (savedData) {
-      try {
-        const parsed = JSON.parse(savedData)
-        setFormData(parsed)
-      } catch (e) {
-        // Invalid saved data, ignore
-      }
+    let draft = null
+    try {
+      draft = JSON.parse(localStorage.getItem(FORM_STORAGE_KEY))
+    } catch (e) {
+      localStorage.removeItem(FORM_STORAGE_KEY)
+    }
+    if (draft) {
+      setFormData((prev) => ({ ...prev, ...draft }))
     }
   }, [])
 
-  // Save form data to localStorage as user types
+  // Save form data to localStorage as user types (lightweight fields only)
   useEffect(() => {
-    if (formData.title || formData.description || formData.location || formData.image) {
-      localStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(formData))
+    if (formData.title || formData.description || formData.location) {
+      const safeDraft = {
+        title: formData.title,
+        description: formData.description,
+        location: formData.location,
+        phone: formData.phoneNumber,
+        category: formData.category,
+        hasReward: formData.hasReward,
+        rewardAmount: formData.rewardAmount,
+      }
+      try {
+        localStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(safeDraft))
+      } catch (error) {
+        console.warn('Draft storage skipped due to quota limit', error)
+      }
     }
   }, [formData])
 
@@ -68,7 +81,7 @@ export default function ReportLostItem() {
 
     switch (field) {
       case 'title':
-        if (!value || value.trim().length < 3) {
+        if (!value || (value || "").trim().length < 3) {
           newErrors.title = 'Title must be at least 3 characters'
         } else if (value.length > 100) {
           newErrors.title = 'Title must be 100 characters or less'
@@ -77,7 +90,7 @@ export default function ReportLostItem() {
         }
         break
       case 'description':
-        if (!value || value.trim().length < 10) {
+        if (!value || (value || "").trim().length < 10) {
           newErrors.description = 'Description must be at least 10 characters'
         } else if (value.length > 500) {
           newErrors.description = 'Description must be 500 characters or less'
@@ -86,16 +99,16 @@ export default function ReportLostItem() {
         }
         break
       case 'location':
-        if (!value || value.trim().length === 0) {
+        if (!value || (value || "").trim().length === 0) {
           newErrors.location = 'Location is required'
         } else {
           delete newErrors.location
         }
         break
       case 'phoneNumber':
-        if (!value || value.trim().length === 0) {
+        if (!value || (value || "").trim().length === 0) {
           newErrors.phoneNumber = 'Phone number is required'
-        } else if (!/^\d{10,15}$/.test(value.trim())) {
+        } else if (!/^\d{10,15}$/.test((value || "").trim())) {
           newErrors.phoneNumber = 'Enter a valid phone number (10-15 digits)'
         } else {
           delete newErrors.phoneNumber
@@ -115,7 +128,7 @@ export default function ReportLostItem() {
     if (!templeCode) return
 
     const timeoutId = setTimeout(async () => {
-      if (formData.title.trim().length >= 3 || formData.description.trim().length >= 10) {
+      if ((formData.title || "").trim().length >= 3 || (formData.description || "").trim().length >= 10) {
         const duplicates = await checkForDuplicates(
           formData.title,
           formData.description,
@@ -213,13 +226,13 @@ export default function ReportLostItem() {
 
       const result = await createItemReport(
         {
-          title: formData.title.trim(),
-          description: formData.description.trim(),
-          location: formData.location.trim(),
+          title: (formData.title || "").trim(),
+          description: (formData.description || "").trim(),
+          location: (formData.location || "").trim(),
           image: formData.image,
           category: formData.category || 'other',
           rewardAmount: formData.hasReward && formData.rewardAmount ? parseFloat(formData.rewardAmount) : null,
-          contactPhone: formData.phoneNumber.trim(),
+          contactPhone: (formData.phoneNumber || "").trim(),
         },
         session.sessionToken,
         templeCode
@@ -253,12 +266,12 @@ export default function ReportLostItem() {
     // Only count errors with truthy values (ignore null/undefined entries)
     const realErrors = Object.values(errors).filter(Boolean)
     return (
-      formData.title.trim().length >= 3 &&
-      formData.title.trim().length <= 100 &&
-      formData.description.trim().length >= 10 &&
-      formData.description.trim().length <= 500 &&
-      formData.location.trim().length > 0 &&
-      /^\d{10,15}$/.test(formData.phoneNumber.trim()) &&
+      (formData.title || "").trim().length >= 3 &&
+      (formData.title || "").trim().length <= 100 &&
+      (formData.description || "").trim().length >= 10 &&
+      (formData.description || "").trim().length <= 500 &&
+      (formData.location || "").trim().length > 0 &&
+      /^\d{10,15}$/.test((formData.phoneNumber || "").trim()) &&
       realErrors.length === 0
     )
   }

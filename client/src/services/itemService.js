@@ -251,14 +251,14 @@ export async function checkForDuplicates(title, description, templeCode) {
 
     if (!title || !description) return [];
 
-    const titleLower = title.toLowerCase().trim();
-    const descLower = description.toLowerCase().trim();
+    const titleLower = (title || "").toLowerCase().trim();
+    const descLower = (description || "").toLowerCase().trim();
 
     if (titleLower.length < 3 && descLower.length < 3) return [];
 
     return items.filter((item) => {
-      const itemTitleLower = item.title.toLowerCase().trim();
-      const itemDescLower = item.description.toLowerCase().trim();
+      const itemTitleLower = (item.title || "").toLowerCase().trim();
+      const itemDescLower = (item.description || "").toLowerCase().trim();
 
       const titleSimilar =
         titleLower.length >= 3 &&
