@@ -15,7 +15,7 @@ const { notifyTemple } = require("../services/pushNotificationService");
 // Submit a found item report (JSON body, no image)
 // -----------------------------------------------------------------
 const createFoundItem = async (req, res) => {
-  const { title, category, locationFound, timeFound, image } = req.body;
+  const { title, category, locationFound, timeFound, image, contactPhone } = req.body;
   const session = req.session;
 
   if (!title || !locationFound) {
@@ -37,6 +37,7 @@ const createFoundItem = async (req, res) => {
       timeFound: timeFound || now,
       image: image || null,
       imageApproved: false,
+      contactPhone: contactPhone || null,
       finderSessionId: session.sessionId,
       templeId: session.templeId,
       status: "found", // found | matched | closed
@@ -88,7 +89,7 @@ const getFoundItems = async (req, res) => {
 
     let items = [];
     snapshot.forEach((doc) => {
-      const item = { id: doc.id, ...doc.data() };
+      const { contactPhone, ...item } = { id: doc.id, ...doc.data() };
       if (item.status !== "closed") {
         items.push(item);
       }
@@ -199,7 +200,8 @@ const getFoundItemById = async (req, res) => {
       return res.status(404).json({ success: false, error: "Found item not found" });
     }
 
-    res.json({ success: true, item: { id: doc.id, ...doc.data() } });
+    const { contactPhone, ...publicData } = { id: doc.id, ...doc.data() };
+    res.json({ success: true, item: publicData });
   } catch (error) {
     console.error("❌ Get found item by ID error:", error);
     res.status(500).json({ success: false, error: "Failed to fetch found item" });

@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   LogOut, Shield, CheckCircle2, AlertTriangle, Check, XCircle,
   HelpCircle, Loader2, RefreshCw, Trash2, MessageSquare, FileText,
-  ClipboardList, Package, Search as SearchIcon, X, Eye, Image as ImageIcon
+  ClipboardList, Package, Search as SearchIcon, X, Eye, Image as ImageIcon, Phone
 } from 'lucide-react'
 import Layout from '../components/Layout'
 import Card from '../components/Card'
@@ -627,6 +627,7 @@ export default function AdminDashboard() {
                           <th className="px-4 py-3 md:px-5">Title</th>
                           <th className="px-4 py-3 md:px-5">Category</th>
                           <th className="px-4 py-3 md:px-5">Location</th>
+                          <th className="px-4 py-3 md:px-5">Phone</th>
                           <th className="px-4 py-3 md:px-5">Status</th>
                           <th className="px-4 py-3 md:px-5">Reported</th>
                           <th className="px-4 py-3 md:px-5 text-right">Actions</th>
@@ -635,7 +636,7 @@ export default function AdminDashboard() {
                       <tbody>
                         {filteredItems.length === 0 ? (
                           <tr>
-                            <td colSpan={7} className="px-6 py-8 text-center text-xs text-[#9CA3AF]">
+                            <td colSpan={8} className="px-6 py-8 text-center text-xs text-[#9CA3AF]">
                               No items matching the selected filters.
                             </td>
                           </tr>
@@ -656,6 +657,16 @@ export default function AdminDashboard() {
                               </td>
                               <td className="px-4 py-3 md:px-5 text-[#374151] capitalize">{c.category}</td>
                               <td className="px-4 py-3 md:px-5 text-[#4B5563]">{c.location}</td>
+                              <td className="px-4 py-3 md:px-5 text-[#4B5563] font-mono text-[11px]">
+                                {c.contactPhone ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700">
+                                    <Phone className="w-3 h-3" />
+                                    {c.contactPhone}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-400">—</span>
+                                )}
+                              </td>
                               <td className="px-4 py-3 md:px-5">
                                 <span className={`inline-flex items-center px-2 py-1 rounded-full border text-[11px] ${
                                   c.status === 'ACTIVE'

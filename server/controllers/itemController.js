@@ -26,10 +26,10 @@ const getItems = async (req, res) => {
     let items = [];
 
     snapshot.forEach((doc) => {
-      const item = { id: doc.id, ...doc.data() };
+      const { contactPhone, ...publicData } = { id: doc.id, ...doc.data() };
       // Exclude closed items unless includeClosed=true
-      if (includeClosed === "true" || item.status !== "closed") {
-        items.push(item);
+      if (includeClosed === "true" || publicData.status !== "closed") {
+        items.push(publicData);
       }
     });
 
@@ -65,7 +65,7 @@ const searchItems = async (req, res) => {
     const searchTerm = (q || "").toLowerCase().trim();
 
     snapshot.forEach((doc) => {
-      const item = { id: doc.id, ...doc.data() };
+      const { contactPhone, ...item } = { id: doc.id, ...doc.data() };
       if (item.status === "closed") return;
 
       if (!searchTerm) {
@@ -104,7 +104,8 @@ const getItemById = async (req, res) => {
       return res.status(404).json({ success: false, error: "Item not found" });
     }
 
-    res.json({ success: true, item: { id: doc.id, ...doc.data() } });
+    const { contactPhone, ...publicData } = { id: doc.id, ...doc.data() };
+    res.json({ success: true, item: publicData });
   } catch (error) {
     console.error("❌ Get item error:", error);
     res.status(500).json({ success: false, error: "Failed to fetch item" });
@@ -116,7 +117,7 @@ const getItemById = async (req, res) => {
 // Create a new lost item report
 // -----------------------------------------------------------------
 const createItem = async (req, res) => {
-  const { title, description, location, image, rewardAmount, category } = req.body;
+  const { title, description, location, image, rewardAmount, category, contactPhone } = req.body;
   const session = req.session; // attached by verifySession middleware
 
   if (!title || !description || !location) {
@@ -150,6 +151,7 @@ const createItem = async (req, res) => {
       category: category || "other",
       rewardAmount: rewardAmount ? parseFloat(rewardAmount) : null,
       rewardGiven: false,
+      contactPhone: contactPhone || null,
       status: "active",
       templeId: session.templeId,
       reporterSessionId: session.sessionId,

@@ -83,6 +83,7 @@ export async function createItemReport(itemData, sessionId, templeCode) {
         image: itemData.image || null,
         category: itemData.category || 'other',
         rewardAmount: itemData.rewardAmount || null,
+        contactPhone: itemData.contactPhone || null,
       }),
     });
 
@@ -398,7 +399,7 @@ export async function rejectClaim(claimId) {
 // -----------------------------------------------------------------
 // Submit a found item report (simple JSON)
 // -----------------------------------------------------------------
-export async function submitFoundItem(title, category, locationFound, timeFound, image) {
+export async function submitFoundItem(title, category, locationFound, timeFound, image, contactPhone) {
   try {
     const res = await fetch(`${API_URL}/api/found-items/create`, {
       method: 'POST',
@@ -412,6 +413,7 @@ export async function submitFoundItem(title, category, locationFound, timeFound,
         locationFound,
         timeFound: timeFound || new Date().toISOString(),
         image: image || null,
+        contactPhone: contactPhone || null,
       }),
     });
 

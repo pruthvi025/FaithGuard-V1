@@ -248,6 +248,7 @@ const getDashboardItems = async (req, res) => {
         createdAt: data.createdAt || new Date().toISOString(),
         updatedAt: data.updatedAt || null,
         closedAt: data.closedAt || null,
+        contactPhone: data.contactPhone || null,
       });
     });
 
@@ -289,6 +290,7 @@ const getDashboardFoundItems = async (req, res) => {
         ownerSessionId: data.ownerSessionId || null,
         createdAt: data.createdAt || new Date().toISOString(),
         updatedAt: data.updatedAt || null,
+        contactPhone: data.contactPhone || null,
       });
     });
 

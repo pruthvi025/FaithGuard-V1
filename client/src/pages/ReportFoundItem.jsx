@@ -18,6 +18,7 @@ export default function ReportFoundItem() {
     title: '',
     locationFound: '',
     timeFound: '',
+    phoneNumber: '',
     image: null,
   })
   const [errors, setErrors] = useState({})
@@ -35,6 +36,7 @@ export default function ReportFoundItem() {
     const newErrors = { ...errors }
     if (field === 'title' && value.trim().length >= 3) delete newErrors.title
     if (field === 'locationFound' && value.trim().length > 0) delete newErrors.locationFound
+    if (field === 'phoneNumber' && /^\d{10,15}$/.test(value.trim())) delete newErrors.phoneNumber
     delete newErrors.submit
     setErrors(newErrors)
   }
@@ -44,6 +46,7 @@ export default function ReportFoundItem() {
     if (!formData.title || formData.title.trim().length < 3) newErrors.title = 'Title must be at least 3 characters'
     if (!formData.locationFound || formData.locationFound.trim().length === 0) newErrors.locationFound = 'Location is required'
     if (!formData.category) newErrors.category = 'Please select a category'
+    if (!formData.phoneNumber || !/^\d{10,15}$/.test(formData.phoneNumber.trim())) newErrors.phoneNumber = 'Enter a valid phone number (10-15 digits)'
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -52,7 +55,8 @@ export default function ReportFoundItem() {
     return (
       formData.category &&
       formData.title.trim().length >= 3 &&
-      formData.locationFound.trim().length > 0
+      formData.locationFound.trim().length > 0 &&
+      /^\d{10,15}$/.test(formData.phoneNumber.trim())
     )
   }
 
@@ -95,7 +99,8 @@ export default function ReportFoundItem() {
         formData.category,
         formData.locationFound.trim(),
         formData.timeFound || new Date().toISOString(),
-        formData.image
+        formData.image,
+        formData.phoneNumber.trim()
       )
 
       setSubmitted(true)
@@ -279,6 +284,27 @@ export default function ReportFoundItem() {
                         value={formData.timeFound}
                         onChange={(e) => setFormData({ ...formData, timeFound: e.target.value })}
                       />
+                    </div>
+
+                    {/* Phone Number */}
+                    <div>
+                      <label className="block text-sm font-semibold text-[#475569] mb-3">
+                        Phone Number *
+                      </label>
+                      <Input
+                        type="tel"
+                        placeholder="e.g., 9876543210"
+                        value={formData.phoneNumber}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/[^0-9]/g, '')
+                          handleFieldChange('phoneNumber', value)
+                        }}
+                        className={errors.phoneNumber ? 'border-red-300' : ''}
+                      />
+                      <p className="text-xs text-[#64748B] mt-1">Only visible to temple administrators for emergency contact.</p>
+                      {errors.phoneNumber && (
+                        <p className="text-xs text-red-600 mt-1">{errors.phoneNumber}</p>
+                      )}
                     </div>
 
                     {/* Photo Upload (Optional) */}

@@ -25,6 +25,7 @@ export default function ReportLostItem() {
     title: '',
     description: '',
     location: '',
+    phoneNumber: '',
     image: null,
     hasReward: false,
     rewardAmount: '',
@@ -89,6 +90,15 @@ export default function ReportLostItem() {
           newErrors.location = 'Location is required'
         } else {
           delete newErrors.location
+        }
+        break
+      case 'phoneNumber':
+        if (!value || value.trim().length === 0) {
+          newErrors.phoneNumber = 'Phone number is required'
+        } else if (!/^\d{10,15}$/.test(value.trim())) {
+          newErrors.phoneNumber = 'Enter a valid phone number (10-15 digits)'
+        } else {
+          delete newErrors.phoneNumber
         }
         break
       default:
@@ -171,8 +181,9 @@ export default function ReportLostItem() {
     const isTitleValid = validateField('title', formData.title)
     const isDescValid = validateField('description', formData.description)
     const isLocationValid = validateField('location', formData.location)
+    const isPhoneValid = validateField('phoneNumber', formData.phoneNumber)
 
-    if (!isTitleValid || !isDescValid || !isLocationValid) {
+    if (!isTitleValid || !isDescValid || !isLocationValid || !isPhoneValid) {
       return
     }
 
@@ -208,6 +219,7 @@ export default function ReportLostItem() {
           image: formData.image,
           category: formData.category || 'other',
           rewardAmount: formData.hasReward && formData.rewardAmount ? parseFloat(formData.rewardAmount) : null,
+          contactPhone: formData.phoneNumber.trim(),
         },
         session.sessionToken,
         templeCode
@@ -246,6 +258,7 @@ export default function ReportLostItem() {
       formData.description.trim().length >= 10 &&
       formData.description.trim().length <= 500 &&
       formData.location.trim().length > 0 &&
+      /^\d{10,15}$/.test(formData.phoneNumber.trim()) &&
       realErrors.length === 0
     )
   }
@@ -416,6 +429,26 @@ export default function ReportLostItem() {
                       />
                       {errors.location && (
                         <p className="text-xs text-red-600 mt-1">{errors.location}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-[#475569] mb-3">
+                        Phone Number *
+                      </label>
+                      <Input
+                        type="tel"
+                        placeholder="e.g., 9876543210"
+                        value={formData.phoneNumber}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/[^0-9]/g, '')
+                          handleFieldChange('phoneNumber', value)
+                        }}
+                        className={errors.phoneNumber ? 'border-red-300' : ''}
+                      />
+                      <p className="text-xs text-[#64748B] mt-1">Only visible to temple administrators for emergency contact.</p>
+                      {errors.phoneNumber && (
+                        <p className="text-xs text-red-600 mt-1">{errors.phoneNumber}</p>
                       )}
                     </div>
 
