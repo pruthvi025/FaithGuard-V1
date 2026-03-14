@@ -64,7 +64,7 @@ export function NotificationProvider({ children }) {
 
     // Always refresh FCM token on app load (handles browser refresh, token rotation)
     if (permission === 'granted') {
-      getFCMToken(session.id, session.templeCode)
+      getFCMToken(session.sessionToken, session.templeId)
         .then((token) => {
           if (token) {
             setFcmToken(token)
@@ -97,7 +97,7 @@ export function NotificationProvider({ children }) {
 
       // If granted, get FCM token
       if (newPermission === 'granted' && session && isSessionValid()) {
-        const token = await getFCMToken(session.id, session.templeCode)
+        const token = await getFCMToken(session.sessionToken, session.templeId)
         if (token) {
           setFcmToken(token)
         }
